@@ -16,6 +16,14 @@ It is designed with the following workflow in mind:
 2. Initialize a KiCad project with the KiTree CLI and add the parts needed for the design
 3. When the design is finished, the BOM can be build from the CLI
 
+# Roadmap
+
+- [x] Basic usage 
+- [ ] Part creation from KiCad to InvenTree
+- [ ] Export JLCPCB assembly BOMs
+- [ ] Use vendor APIs to create parts from templates in InvenTree
+- [ ] ??? - Make suggestions for other features by opening an issue
+
 # Requirements
 
 - Python 3.10 or higher
@@ -25,3 +33,9 @@ It is designed with the following workflow in mind:
 # Documentation
 
 To be defined at first release. Bookmark the project to stay updated.
+
+# Development
+
+0. Install the required packages
+1. Rename `kitree-cfg.example.json` to `kitree-cfg.json`
+2. Fill in the credentials to your InvenTree server

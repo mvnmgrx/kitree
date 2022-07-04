@@ -1,0 +1,10 @@
+{
+    "Inventree": {
+        "Username": "inventree",
+        "Password": "<my_super_secret_password_here>",
+        "Domain": "https://inventree.myserver.tld"
+    },
+    "LastProject": null,
+    "KnownProjects": {
+    }
+}
