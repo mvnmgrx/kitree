@@ -1,6 +1,7 @@
 temp/*
 *__pycache__*
 *.log*
+*.csv*
 
 # KiTree configuration (contains sensitive data)
 kitree-cfg.json

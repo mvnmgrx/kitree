@@ -25,6 +25,7 @@ from misc.console import Console
 from misc.config import Config
 from project.project import Project
 from api.inventree import ITApi
+from external.exporter import Exporter
 
 
 def ShowStatus(args: list):
@@ -643,3 +644,16 @@ def ShowLog(args: list):
                 continue
             Console.Out(f'{line}', newline=False)
             counter = counter + 1
+
+def ExportToFile(args: list):
+    if not Project.Loaded:
+        return Console.Out('No project loaded!')
+
+    if len(args) < 2:
+        Console.Out('Usage: export [ exporter_name ] [ file_name ]')
+        return Console.Out(f'Available exporters: {", ".join(Exporter.GetAvailableExporters())}')
+
+    if len(Project.Parts) == 0:
+        return Console.Out('No parts in the project\'s part list')
+
+    return Exporter.Export(exporter_name = args[0], file_name = args[1], parts = Project.Parts)

@@ -17,17 +17,19 @@ from api.inventree import ITApi
 KiTreeVersion = 'v0.0-rc1'
 KiTreeAuthor = '(C) Marvin Mager - @mvnmgrx - 2022'
 
-credentials = {
-    "username": "",
-    "password": "",
-    "domain": ""
-}
 
 if __name__ == "__main__":
     Logger.Init()
     Config.Load()
 
     Console.Print(f'KiTree CLI {KiTreeVersion} {KiTreeAuthor}')
+
+    # FIXME: Remove this hack
+    credentials = {
+        "username": Config.Data['Inventree']['Username'],
+        "password": Config.Data['Inventree']['Password'],
+        "domain": Config.Data['Inventree']['Domain']
+    }
 
     ITApi.Connect(credentials)
     Console.AddCommand("status", ShowStatus)
@@ -44,6 +46,7 @@ if __name__ == "__main__":
     Console.AddCommand("init", InitProject)
     Console.AddCommand("help", GetHelp)
     Console.AddCommand("log", ShowLog)
+    Console.AddCommand("export", ExportToFile)
     
     while Console.IsRunning:
         Console.ProcessInput(Console.In())
