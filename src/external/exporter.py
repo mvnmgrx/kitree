@@ -1,11 +1,12 @@
 
-from external.assembly.jlcpcb import JlcAssembly
+from external.assembly.jlcpcb import JlcAssemblyBom, JlcAssemblyXY
 from external.templates import GenericExporter
 from misc.console import Console
 
 
 exporters: dict[str, GenericExporter] = {
-    "jlcpcb_assembly": JlcAssembly
+    "jlc_assembly_bom": JlcAssemblyBom,
+    "jlc_assembly_xy": JlcAssemblyXY
 }
 """Dict of references to available exporters"""
 

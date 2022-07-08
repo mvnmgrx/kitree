@@ -1,4 +1,5 @@
 from kiutils.schematic import Schematic
+from kiutils.board import Board
 from collections import namedtuple
 from os import path
 
@@ -117,4 +118,78 @@ def EnumerateSchematic(schematic: Schematic, parts_list: list) -> dict:
                     break
             else:
                 logger.error(f'No sheet for {instPath.sheetUuid} found!')
+    return parts
+
+    
+def EnumerateBoard(board: Board, parts_list: list, use_smd: bool = True, use_tht: bool = True) -> dict:
+    """Searches for all references of the given parts in a board
+    
+    Params:
+        board (Board): Board parsed by KiUtils
+        parts_list (list[str]): List of parts used in the project (referenced by their IPN)
+        use_smd (bool): Use SMD components when enumerating (Defaults to True)
+        use_tht (bool): Use THT components when enumerating (Defaults to True)
+
+    Returns:
+        Dictionary with IPN's as key and a list of references of components that use said IPN as 
+        value
+
+    ### Example usage:
+
+    `parts = EnumerateBoard(Board().from_file('my.kicad_pcb'), ['IPN1', 'IPN2'])`
+
+    Returns something like: `parts = { 'IPN1': ['R1', 'R4'], 'IPN2': ['C1'] }`
+
+    A key will never have an empty list assigned to it. At least one reference will always be
+    present for a given key. If a key is not in the return dict, it was not found in the 
+    board.
+    """
+
+    # Count the symbols in schematic that are marked as 'in_bom'
+    parts = {}
+    logger = Logger().Create(__name__)
+
+    for footprint in board.footprints:
+        reference = footprint.graphicItems[0].text
+
+        # Check if the symbol is a variant of another symbol or a power unit
+        if footprint.attributes.boardOnly:
+            logger.info(f'Skipping {reference} as it was found only on the board!')
+            continue
+
+        if footprint.attributes.excludeFromBom:
+            logger.info(f'Skipping {reference} as it was excluded from the BOM!')
+            continue
+
+        if footprint.attributes.excludeFromPosFiles:
+            logger.info(f'Skipping {reference} as it was excluded from POS files!')
+            continue
+
+        if footprint.attributes.type == 'smd' and not use_smd:
+            logger.info(f'Skipping {reference} as SMD components shall not be used!')
+            continue
+
+        if footprint.attributes.type == 'through_hole' and not use_tht:
+            logger.info(f'Skipping {reference} as THT components shall not be used!')
+            continue
+
+        # Check if the IPN is in the property list:
+        for property in footprint.properties.keys():
+            if property == user.IPN_FIELD_NAME:
+                # Check if the symbol's IPN is on the project's part list
+                if not footprint.properties[property] in parts_list:
+                    logger.info(f'Skipping {footprint.properties[property]} ({reference}) as it is not on the project\'s part list')
+                    continue
+
+                # Add item to parts dict (property.value := IPN)
+                if footprint.properties[property] in parts.keys():
+                    parts[footprint.properties[property]].append(reference)
+                else:
+                    parts.update({ footprint.properties[property]: [ reference ] })
+
+                logger.info(f'Added {footprint.properties[property]} ({reference}) to the parts list')
+                continue
+        else:
+            logger.warning(f'Skipping {reference} as it has no IPN assigned ..')
+            continue
     return parts
