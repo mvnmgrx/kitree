@@ -1,5 +1,7 @@
 # KiTree
 
+![LoC](https://img.shields.io/tokei/lines/github/mvnmgrx/kitree)
+
 ⚠⚠ This tool is WIP and theirfore neither stable nor finished ⚠⚠
 
 KiTree is a CLI tool that assists in creating KiCad PCBs with parts tracked on an InvenTree server. 
