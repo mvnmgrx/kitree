@@ -26,6 +26,7 @@ from misc.config import Config
 from project.project import Project
 from api.inventree import ITApi
 from external.exporter import Exporter
+from config import user
 
 
 def ShowStatus(args: list):
@@ -268,14 +269,15 @@ def BuildLibs(args: list):
         basicProperties[3].value = part.GetDatasheetUrl()
         basicProperties[3].position = Position(X=0.0, Y=198.08, angle=0.0)
 
+        # TODO: Search for the lowest part of a symbol and put the invisible text there
         # Add additional properties to the symbol that are retrieved from the Inventree part
         additionalProperties = [
-            Property(key="Internal Nr.", value=part.IPN, id=4, effects=basicEffects, position=Position(0.0, 196.14, 0.0)),
-            Property(key="Manufacturer", value=part.GetManufacturerName(), id=5, effects=basicEffects, position=Position(0.0, 194.21, 0.0)),
-            Property(key="Part Nr.", value=part.GetMPN(), id=6, effects=basicEffects, position=Position(0.0, 192.28, 0.0)),
-            Property(key="Supplier", value=part.GetSupplierName(), id=7, effects=basicEffects, position=Position(0.0, 190.35, 0.0)),
-            Property(key="Order Nr.", value=part.GetSKU(), id=8, effects=basicEffects, position=Position(0.0, 188.42, 0.0)),
-            Property(key="Link", value=part.GetSupplierLink(), id=9, effects=basicEffects, position=Position(0.0, 186.49, 0.0))
+            Property(key=user.IPN_FIELD_NAME, value=part.IPN, id=4, effects=basicEffects, position=Position(0.0, 196.14, 0.0)),
+            Property(key=user.MF_FIELD_NAME, value=part.GetManufacturerName(), id=5, effects=basicEffects, position=Position(0.0, 194.21, 0.0)),
+            Property(key=user.MPN_FIELD_NAME, value=part.GetMPN(), id=6, effects=basicEffects, position=Position(0.0, 192.28, 0.0)),
+            Property(key=user.SUPPLIER_FIELD_NAME, value=part.GetSupplierName(), id=7, effects=basicEffects, position=Position(0.0, 190.35, 0.0)),
+            Property(key=user.SKU_FIELD_NAME, value=part.GetSKU(), id=8, effects=basicEffects, position=Position(0.0, 188.42, 0.0)),
+            Property(key=user.URL_FIELD_NAME, value=part.GetSupplierLink(), id=9, effects=basicEffects, position=Position(0.0, 186.49, 0.0))
         ]
         
         # Search for the Package field that should be kept if its given
