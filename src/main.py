@@ -14,15 +14,13 @@ from misc.commands import *
 
 from api.inventree import ITApi
 
-KiTreeVersion = 'v0.0-rc1'
-KiTreeAuthor = '(C) Marvin Mager - @mvnmgrx - 2022'
-
+from config import system
 
 if __name__ == "__main__":
     Logger.Init()
     Config.Load()
 
-    Console.Print(f'KiTree CLI {KiTreeVersion} {KiTreeAuthor}')
+    Console.Print(f'KiTree CLI {system.CLI_VERSION} {system.COPYRIGHT_NOTICE}')
 
     # FIXME: Remove this hack
     credentials = {
