@@ -1,11 +1,14 @@
 
 import csv
 from datetime import datetime
+from os import path
+from kiutils.schematic import Schematic
 
 from api.inventree import ITApi
 from misc.logger import Logger
 from misc.console import Console
 from misc.colors import Color
+from misc.tools import EnumerateSchematic
 from components.part import Part
 from main import KiTreeVersion
 from external.templates import GenericExporter
@@ -29,9 +32,30 @@ class JlcAssembly(GenericExporter):
                 csv_writer.writerow([f';Project name: {Project.Name}'])
                 csv_writer.writerow([f'sep=,'])
 
-                # Enumerate parts in schematic
+                # Open KiCad project schematic
+                Console.Out('Parsing KiCad schematic .. ', newline=False)
+                schematicPath = path.join(Project.Path, f'{Project.Name}.kicad_sch')
+                try:
+                    schematic = Schematic().from_file(schematicPath)
+                    Console.Append(f'{Color.OkGreen}Done!')
+                except Exception as ex:
+                    Console.Log.error(f'Could not parse schematic of project "{Project.Name}" at {schematicPath}!')
+                    Console.Log.debug(f'Exception: {str(ex)}')
+                    Console.Append(f'{Color.Fail}Failed!')
+                    return False
 
-                for partIpn in parts:
+                # Enumerate parts in schematic
+                Console.Out('Enumerating KiCad schematic .. ', newline=False)
+                enumerated_parts = {}
+                enumerated_parts = EnumerateSchematic(schematic, parts)
+                Console.Append(f'{Color.OkGreen}Done!')
+                Console.Out('Found the following parts:')
+                Console.Inc()
+                for part in enumerated_parts.keys():
+                    Console.Out(f'- {Color.Bold}{part}{Color.End}: {", ".join(enumerated_parts[part])}')
+                Console.Dec()
+
+                for partIpn in enumerated_parts.keys():
                     Console.Out(f'Processing {partIpn} ..', newline=False)
 
                     # Get part information from API
