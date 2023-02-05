@@ -7,172 +7,147 @@ License identifier:
     GPL-3.0
 """
 
-
 import json
-from types import NoneType
+import marshmallow_dataclass
+
+from dataclasses import dataclass, field
+from os import path, makedirs
+from typing import List
 
 from misc.logger import Logger
 
+@dataclass
+class Credentials():
+    """Simple credential store"""
+
+    id: str = ""
+    """Identifier of the credential"""
+
+    username: str = ""
+    """The username to use for login"""
+
+    password: str = ""
+    """The password to use for login"""
+
+    domain: str = ""
+    """The domain to authenticate to"""
+
+@dataclass
+class KnownProject():
+    """A project known to kitree"""
+
+    name: str = ""
+    """Name of the project"""
+
+    path: str = ""
+    """Path to the project"""
+
+@dataclass
+class ConfigData():
+    """Class containing all configuration data that shall be exists in the config file"""
+
+    inventreeCredentials: List[Credentials] = field(default_factory=list)
+    """List of credentials used to authenticate to InvenTree servers to"""
+
+    lastLoadedProject: str = ""
+    """Name of the project that was loaded last"""
+
+    knownProjects: List[KnownProject] = field(default_factory=list)
+    """Projects known to kitree"""
+
 class Config():
-    """Static class managing and representing the config file
-    """
-    Path = 'kitree-cfg.json'        ## Path to config file
-    Data = {}                       ## Data of the config file
-    Loaded = False                  ## Flag if the config was loaded
-    Log = Logger.Create(__name__)
+    """Static class managing and representing the config file"""
 
-    @staticmethod
-    def Load() -> bool:
-        """Load data from the config file
+    path = path.join(path.expanduser('~'), '.kitree', 'config.json')
+    """Path to the global configuration file"""
 
-        Returns:
-            bool: True if the file was loaded and parsed correctly. Otherwise False
+    data = ConfigData()
+    """Configuration data for kitree"""
+
+    dataSchema = marshmallow_dataclass.class_schema(ConfigData)()
+    """Data schema of the config data class used for serialization/deserialization"""
+
+    log = Logger.Create(__name__)
+    """Logger for the Config() class"""
+
+    def load():
+        """Load data from the config file or creates it if it does not exist yet.
 
         See:
-            Config.Path - Path to config file
+            - Config.path - Path to config file
         """
-        try:
-            with open(Config.Path) as json_file:
-                Config.Data = json.load(json_file)
-            Config.Loaded = True
-            Config.Log.info(f'Config file at {Config.Path} loaded successfully')
-            return True
-        except Exception as ex:
-            Config.Log.error(f'Failed to parse config file! Exception: {ex}')
-            return False
+        if not path.exists(Config.path):
+            Config.save()
+
+        with open(Config.path) as json_file:
+            content = json.load(json_file)
+            Config.data = Config.dataSchema.load(content)
+
+        Config.log.info(f'Config file at {Config.path} loaded successfully')
 
     @staticmethod
-    def Save() -> bool:
+    def save():
         """Save data to the config file
 
-        Returns:
-            bool: True if the file was saved correctly. Otherwise False
-
         See:
-            Config.Path - Path to config file
+            - Config.path - Path to config file
         """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-            return False
+        # Check if config directory exists
+        if not path.exists(path.dirname(Config.path)):
+            Config.log.warning(f"Config directory at {Config.path} missing, creating it now ..")
+            makedirs(path.dirname(Config.path))
 
-        try:
-            with open(Config.Path, 'w') as outfile:
-                json.dump(Config.Data, outfile, indent=4)
-            Config.Log.info(f'Saved configuration to {Config.Path} was successfull')
-            return True
-        except Exception as ex:
-            Config.Log.error(f'Failed to save config file! Exception: {ex}')
-        return False
+        # Write to the file
+        with open(Config.path, 'w') as outfile:
+            content = Config.dataSchema.dump(Config.data)
+            bytes_written = outfile.write(json.dumps(content, indent=4))
 
-    ##
-    # Verifys the config file to make sure all dict entries are there
-    # \return false, if at least one dict entry is missing. Otherwise true
-    @staticmethod
-    def Verify() -> bool:
-        # TODO: Write verification function
-        return True
+        Config.log.info(f'Saved configuration to {Config.path} was successfull ({bytes_written} bytes written)')
 
     @staticmethod
-    def AddKnownProject(name: str, path: str) -> bool:
-        """Add a project to the list of known projects
+    def add_known_project(name: str, path: str):
+        """Add a project to the list of known projects and saves the config to disk
 
         Args:
-            name (str): Name of the project
-            path (str): Path to the project's KiCad root directory
-
-        Returns:
-            bool: True if the project was added to the list and saved to 
-                  the config file, as well as if the project was already 
-                  on the list of known projects. Otherwise False
+            - name (str): Name of the project
+            - path (str): Path to the project's KiCad root directory
         """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-            return False
-        
-        if name in Config.Data["KnownProjects"].keys():
-            Config.Log.debug(f'Project "{name}" already known')
-            return True
-        else:    
-            Config.Log.debug(f'Adding project "{name}" at {path} to list of known objects')
-            Config.Data["KnownProjects"].update({name: path})
-            return Config.Save()
+        if Config.is_known_project(name):
+            Config.log.debug(f'Project "{name}" already known')
+        else:
+            Config.log.debug(f'Adding project "{name}" at {path} to list of known objects')
+            Config.data.knownProjects.append(KnownProject(name=name, path=path))
 
     @staticmethod
-    def GetKnownProjects() -> dict:
-        """Get a list of known projects as a dict of key-value pairs
-
-        Returns:
-            dict: Empty dict if the config file was not loaded yet. Otherwise a dict 
-                  of known projects with the name as keys and the path as values
-        """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-            return {}
-
-        return Config.Data["KnownProjects"]
-
-    @staticmethod
-    def IsKnownProject(project: str) -> bool:
+    def is_known_project(name: str) -> bool:
         """Check if a project (not a path) is on the list of known projects
 
         Args:
-            project (str): Name of the project
+            - name (str): Name of the project
 
         Returns:
-            bool: True if the project is on the lsit of known projects, otherwise False
+            - bool: True if the project is on the list of known projects, otherwise False.
         """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-            return False
-
-        return project in Config.Data["KnownProjects"].keys()
+        for project in Config.data.knownProjects:
+            if project.name == name:
+                return True
+        return False
 
     @staticmethod
-    def GetKnownProjectPath(project: str) -> str:
+    def get_known_project_path(name: str) -> str:
         """Get the path to the KiCad root folder of a given project
 
         Args:
-            project (str): Name of the project
+            - name (str): Name of the project
 
         Returns:
-            str: None if either the config file is not loaded or the project is not on 
-                 the list of known projects. Otherwise the path to the KiCad root folder
-                 of the project
+            - str: None if either the config file is not loaded or the project is not on the list 
+                   of known projects. Otherwise the path to the KiCad root folder of the project.
         """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-            return None
+        for project in Config.data.knownProjects:
+            if project.name == name:
+                return project.path
 
-        if not Config.IsKnownProject(project):
-            Config.Log.warning(f'Project {project} not known!')
-            return None
+        Config.log.warning(f'Project {project} not known!')
+        return None
 
-        return Config.Data["KnownProjects"][project]
-
-    @staticmethod
-    def SetLastProject(project: str):
-        """Set the name of the last used project
-
-        Args:
-            project (str): Name of the project
-        """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-
-        Config.Data["LastProject"] = project
-        Config.Save()
-
-    @staticmethod
-    def GetLastProject() -> str:
-        """Get the name of the last project
-
-        Returns:
-            str: None if the last project is not known. Otherwise the name of the project
-        """
-        if not Config.Loaded:
-            Config.Log.warning(f'Config file not loaded!')
-            return None
-            
-        if Config.Data["LastProject"] is NoneType:
-            return None
-        return Config.Data["LastProject"]
