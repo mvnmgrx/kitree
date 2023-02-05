@@ -1,4 +1,4 @@
-"""Project configuration 
+"""Project configuration
 
 Author:
     (C) Marvin Mager - @mvnmgrx - 2022
@@ -8,107 +8,93 @@ License identifier:
 """
 
 import json
+import marshmallow_dataclass
+
+from os import path
 from datetime import date
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 from misc.logger import Logger
-from misc.types import Credentials
+
+@dataclass
+class ProjectConfigData():
+    createdDate: str = str(date.today())
+    """Date on which the KiTree project was created"""
+
+    lastEditedDate: str = str(date.today())
+    """Date on which the KiTree project was last edited"""
+
+    inventreeServerId: Optional[str] = None
+    """ID of the InvenTree server to use (has to be configured on the client's KiTree to work)"""
+
+    masterPart: Optional[str] = None
+    """IPN of the master part this project uses"""
+
+    parts: List[str] = field(default_factory=list)
+    """List of part IPNs this project uses"""
 
 @dataclass
 class ProjectConfig():
-    """This class represents a KiTree project config (.kitree file) in a KiCad
-       project folder. It provides a basic abstraction from the JSON syntax in 
-       the file.
+    """This class represents a KiTree project config (.kitree file) in a KiCad project folder. It
+    provides a basic abstraction from the JSON syntax in the file.
     """
-    Data = {}
-    Data["CreatedDate"] = str(date.today())
-    Data["LastEditedDate"] = str(date.today())
-    Data["InventreeCredentials"] = { 
-        "Username": "", 
-        "Password": "",
-        "Domain": ""
-    }
-    Data["MasterPart"] = None
-    Data["Parts"] = []
-    Log = Logger.Create(__name__)
-    FilePath: str | None = None
 
-    def Load(self, filepath: str) -> bool:
-        """Load a project config file from the given path-like object and sets the file path 
+    data: ProjectConfigData = field(default_factory=lambda: ProjectConfigData)
+    """Configuration data of the project"""
+
+    dataSchema = marshmallow_dataclass.class_schema(ProjectConfigData)()
+    """Data schema of the project config data class used for serialization/deserialization"""
+
+    log = Logger.Create(__name__)
+    """Logger of this project config"""
+
+    filePath: Optional[str] = None
+    """Path to the project"""
+
+    def load(self, filepath: str) -> bool:
+        """Load a project config file from the given path-like object and sets the file path
         attribute as given. This attribute can then be used for successive calls to `Save`
         without a parameter given.
 
         Args:
-            filepath (str): Path-like object to the .kitree file
+            - filepath (str): Path-like object to the .kitree file
 
         Returns:
-            bool: True if the file was loaded correctly, otherwise False
+            - bool: True if the file was loaded correctly, otherwise False
         """
-        try:
-            with open(filepath) as infile:
-                self.Data = json.load(infile)
-                self.Log.info(f'Loaded project config from { filepath }')
-                self.FilePath = filepath
-            self.Log.info(f'Loading project configuration from {filepath} was successfull')
- 
-        except Exception as ex:
-            self.Log.error(f'Failed to load project config file at { filepath }!')
-            self.Log.debug(f'Exception: { ex }')
+        if not path.exists(filepath):
+            self.log.error(f'No project config at {filepath} found!')
             return False
+
+        with open(filepath) as infile:
+            content = json.load(infile)
+            self.data = self.dataSchema.load(content)
+            self.filePath = filepath
+        
+        self.log.info(f'Loading project configuration from {filepath} was successfull')
         return True
 
-    def Save(self, filepath: str) -> bool:
+    def save(self, filepath: Optional[str] = None) -> bool:
         """Save a project's config to the file given as a path-like object
 
         Args:
-            filepath (str): Path-like object to the .kitree file
+            - filepath (str): Path-like object to the .kitree file
 
         Returns:
-            bool: True if the file was written successful, otherwise False
+            - bool: True if the file was written successful, otherwise False
         """
         if filepath is None:
-            if self.FilePath is not None:
-                filepath = self.FilePath
+            if self.filePath is not None:
+                filepath = self.filePath
             else:
-                self.Log.error('Failed to load project config file! No path given or set.')
+                self.log.error('Failed to load project config file! No path given or set.')
                 return False
-        try:
-            with open(filepath, 'w') as outfile:
-                self.Data["LastEditedDate"] = str(date.today())
-                json.dump(self.Data, outfile, indent=4)
-            self.Log.info(f'Saved project configuration to {filepath} was successfull')
-        except Exception as ex:
-            self.Log.error(f'Failed to save project config file at { filepath }!')
-            self.Log.debug(f'Exception: { ex }')
-            return False
+
+        with open(filepath, 'w') as outfile:
+            self.data.lastEditedDate = str(date.today())            
+            content = self.dataSchema.dump(self.data)
+            bytes_written = outfile.write(json.dumps(content, indent=4))
+
+        self.log.info(f'Saved project configuration to {filepath} was successfull ({bytes_written} bytes written)')
         return True
-
-    def SetMasterPart(self, masterPart: str):
-        self.Data["MasterPart"] = masterPart
-
-    def GetMasterPart(self, ) -> str:
-        return self.Data["MasterPart"]
-
-    def SetPartsList(self, partsList: list):
-        self.Data["Parts"] = partsList
-        
-    def GetPartsList(self) -> list:
-        return self.Data["Parts"]
-
-    def GetShortName(self) -> str:
-        return self.Data["ShortName"]
-
-    def GetFullName(self) -> str:
-        return self.Data["FullName"]
-
-    def SetInventreeCredentials(self, creds: Credentials):
-        self.Data["InventreeCredentials"]["Username"] = creds.Username
-        self.Data["InventreeCredentials"]["Password"] = creds.Password
-        self.Data["InventreeCredentials"]["Domain"] = creds.Domain
-
-    def GetInventreeCredentials(self) -> Credentials:
-        return Credentials(
-            self.Data["InventreeCredentials"]["Username"], 
-            self.Data["InventreeCredentials"]["Password"],
-            self.Data["InventreeCredentials"]["Domain"]
-        )
