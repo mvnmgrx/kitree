@@ -7,11 +7,11 @@ License identifier:
     GPL-3.0
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import getcwd, makedirs, path
 from types import NoneType
 
-from api.inventree import ITApi
+from api.inventree import InvenTreeApi
 from components.company import ManufacturerPart
 from misc.logger import Logger
 
@@ -46,7 +46,10 @@ class PartCategory():
         self.DefaultKeywords = data['default_keywords']
         self.Level = data['level']
         self.Parent = data['parent']
-        self.Parts = data['parts']
+        # try:
+        #     self.Parts = data['parts']
+        # except:
+        #     self.Parts = None
         self.PathString = data['pathstring']
         self.Url = data['url']
 
@@ -177,7 +180,7 @@ class Part():
     Active: bool = False
     Assembly: bool = False
     Category: int = 0
-    CategoryDetail: PartCategory = PartCategory(None)
+    CategoryDetail: PartCategory = field(default_factory=lambda: PartCategory(None))
     Component: bool = False
     DefaultExpiry: int = 0
     DefaultLocation: str = NoneType
@@ -228,7 +231,7 @@ class Part():
         if partIpn is None:
             return 
 
-        data = ITApi.GetPartDetails(partIpn)
+        data = InvenTreeApi.GetPartDetails(partIpn)
         if data is None:
             raise Exception(f'Part {partIpn} does not exist!')
 
@@ -268,31 +271,31 @@ class Part():
 
         # Check if the part is a variant of another part and load it
         if self.VariantOf is not NoneType and self.VariantOf is not None:
-            self.VariantPart = Part(ITApi.GetPartIpn(self.VariantOf))
+            self.VariantPart = Part(InvenTreeApi.get_part_ipn(self.VariantOf))
 
         # Retrieve the part's parameter list
-        parameterList = ITApi.GetPartParameters(self.ID)
+        parameterList = InvenTreeApi.get_part_parameters(self.ID)
         if parameterList is not None:
             self.Parameters = []
             for data in parameterList:
                 self.Parameters.append(PartParameter(data))
 
         # Retrieve the part's attachment list
-        attachmentList = ITApi.GetPartAttachments(self.ID)
+        attachmentList = InvenTreeApi.get_part_attachments(self.ID)
         if attachmentList is not None:
             self.Attachments = []
             for data in attachmentList:
                 self.Attachments.append(PartAttachment(data))
 
         # Retrieve the part's BOM items
-        bomItems = ITApi.GetPartBomItems(self.ID)
+        bomItems = InvenTreeApi.get_part_bom_items(self.ID)
         if bomItems is not None:
             self.Bom = []
             for data in bomItems:
                 self.Bom.append(BomItem(data))
 
         # Get list of manufacturer parts for this Part
-        parts = ITApi.GetManufacturerPartList(self.ID)
+        parts = InvenTreeApi.get_manufacturer_part_list(self.ID)
         if parts is not None:
             self.ManufacturerParts = []
             for part in parts:
@@ -373,7 +376,7 @@ class Part():
         makedirs(fpFolder, exist_ok=True)
         makedirs(symbolFolder, exist_ok=True)
 
-        itUrl = ITApi.Domain
+        itUrl = InvenTreeApi.domain
         if itUrl[-1] == '/':
             itUrl.removesuffix('/')
 
@@ -384,9 +387,9 @@ class Part():
 
         # Download the component's files to the KiTree temp directory
         try:
-            ITApi.Api.downloadFile(url=itUrl + footprintPath, destination=self.FootprintPath)
+            InvenTreeApi.api.downloadFile(url=itUrl + footprintPath, destination=self.FootprintPath)
             self.Log.info(f'Downloaded footprint for part "{self.IPN}" to "{self.FootprintPath}"')
-            ITApi.Api.downloadFile(url=itUrl + symbolPath, destination=self.SymbolPath)
+            InvenTreeApi.api.downloadFile(url=itUrl + symbolPath, destination=self.SymbolPath)
             self.Log.info(f'Downloaded symbol for part "{self.IPN}" to "{self.FootprintPath}"')
         except Exception as ex:
             self.Log.error(f'Downloading attachments from Inventree API failed for part "{self.IPN}"!')
@@ -396,7 +399,7 @@ class Part():
         # Download the 3D-Model, if one was uploaded to InvenTree
         if self.ModelPath is not None:
             try:
-                ITApi.Api.downloadFile(url=itUrl + modelPath, destination=self.ModelPath)
+                InvenTreeApi.api.downloadFile(url=itUrl + modelPath, destination=self.ModelPath)
                 self.Log.info(f'Downloaded 3D-model for part "{self.IPN}" to "{self.ModelPath}"')
             except Exception as ex:
                 self.Log.warning(f'Downloading 3D-Model from Inventree API failed for part "{self.IPN}"!')
@@ -432,7 +435,7 @@ class Part():
             return ""
         for item in self.Attachments:
             if item.Comment == 'Datasheet':
-                itUrl = ITApi.Domain
+                itUrl = InvenTreeApi.domain
                 if itUrl[-1] == '/':
                     itUrl.removesuffix('/')
                 return f'{itUrl}{item.Attachment}'
@@ -510,6 +513,6 @@ class Part():
             return False
 
         for item in self.Bom:
-            ITApi.DeleteBomItem(item.ID)
+            InvenTreeApi.delete_bom_item(item.ID)
         return True
         

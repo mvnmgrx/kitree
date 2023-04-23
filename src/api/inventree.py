@@ -7,19 +7,20 @@ License identifier:
     GPL-3.0
 """
 
+from dataclasses import dataclass, field
+from typing import Optional
 from inventree.api import InvenTreeAPI
+from components.data import Credentials
 from misc.logger import Logger
 
-class ITApi():
-    User = ""
-    Passwd = ""
-    Domain = ""
-    Api = None
-    Connected = False
-    Log = Logger.Create(__name__)
+@dataclass
+class InvenTreeApi():
+    api = None
+    connected: bool = False
+    credentials: Credentials = field(default_factory=lambda: Credentials())
+    log = Logger.Create(__name__)
 
-    @staticmethod
-    def Connect(credentials: dict) -> bool:
+    def connect(self, credentials: Credentials) -> bool:
         """Connects to an Inventree server
 
         Args:
@@ -29,21 +30,24 @@ class ITApi():
         Returns:
             bool: True, if connection was successfull. Otherwise False
         """
-        ITApi.User = credentials["username"]
-        ITApi.Passwd = credentials["password"]
-        ITApi.Domain = credentials["domain"]
+        self.credentials.domain = credentials.domain
+        self.credentials.id = credentials.id
+        self.credentials.username = credentials.username
+        self.credentials.password = credentials.password
         try:
-            ITApi.Log.debug(f'Connecting to Inventree @ {ITApi.Domain}, Username: {ITApi.User}, PW: {ITApi.Passwd}')
-            ITApi.Api = InvenTreeAPI(ITApi.Domain, username=ITApi.User, password=ITApi.Passwd, verbose=True)
-            ITApi.Connected = True
+            self.log.debug(f'Connecting to Inventree @ {self.credentials.domain}, Username: {self.credentials.username}, PW: <redacted>')
+            self.api = InvenTreeAPI(self.credentials.domain, 
+                                    username=self.credentials.username, 
+                                    password=self.credentials.password, 
+                                    verbose=True)
+            self.connected = True
         except Exception as ex:
-            ITApi.Connected = False
-            ITApi.Log.error(f'Connecting to Inventree failed! Exception: {ex}')
+            self.connected = False
+            self.log.error(f'Connecting to Inventree failed! Exception: {ex}')
 
-        return ITApi.Connected
+        return self.connected
 
-    @staticmethod
-    def GetPartDetails(partIpn: str) -> dict | None:
+    def get_part_detail(self, partIpn: str) -> Optional[dict]:
         """Retrieves details about a part from Inventree
 
         Args:
@@ -56,25 +60,24 @@ class ITApi():
             dict: Dictionary containting information about the part as documented by api-doc
             None: Part does not exist
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
-        partId = ITApi.GetPartId(partIpn)
+        partId = self.get_part_id(partIpn)
         if partId == -1:
             return None
 
         query = f"part/{partId}/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if type(result) != type({}) or len(result) == 0:
             return None
 
         return result
 
-    @staticmethod
-    def GetPartId(partIpn: str) -> int:
+    def get_part_id(self, partIpn: str) -> int:
         """Gets the unique ID of an active part's IPN
 
         Args:
@@ -87,22 +90,21 @@ class ITApi():
             int: Unique ID of the part or -1, if the part does not exist, is not marked as active or
             the IPN is not unique
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         query = f'part/?IPN={partIpn}&active=true'
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) != 1:
-            ITApi.Log.error(f"Received multiple variants of {partIpn}! Expected: 1, got: {len(result)}")
+            self.log.error(f"Received multiple variants of {partIpn}! Expected: 1, got: {len(result)}")
             return -1
 
         return int(result[0]["pk"])
 
-    @staticmethod
-    def GetPartIpn(partId: int) -> str | None:
+    def get_part_ipn(self, partId: int) -> Optional[str]:
         """Retrieves the part IPN of the given part ID
 
         Raises:
@@ -112,24 +114,23 @@ class ITApi():
             str: IPN of the given part ID
             None: Part ID is negative or no part IPN was found
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if partId <= 0:
             return None
 
         query = f"part/{partId}/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if type(result) != type({}) or len(result) == 0:
             return None
 
         return result['IPN']
 
-    @staticmethod
-    def GetPartParameters(partId: int) -> list | None:
+    def get_part_parameters(self, partId: int) -> Optional[list]:
         """Retrieves a part ID's parameters
 
         Raises:
@@ -139,24 +140,23 @@ class ITApi():
             list: Part parameters as a list of dicts
             None: Part ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if partId <= 0:
             return None
 
         query = f"part/parameter/?template=&limit=&part={partId}&offset=/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0:
             return None
 
         return result
 
-    @staticmethod
-    def GetPartAttachments(partId: int) -> list | None:
+    def get_part_attachments(self, partId: int) -> Optional[list]:
         """Retrieves a part ID's attachments
 
         Raises:
@@ -166,24 +166,23 @@ class ITApi():
             list: Part attachments as a list of dicts
             None: Part ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if partId <= 0:
             return None
 
         query = f"part/attachment/?part={partId}&offset=/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0:
             return None
 
         return result
 
-    @staticmethod
-    def GetPartBomItems(partId: int) -> list | None:
+    def get_part_bom_items(self, partId: int) -> Optional[list]:
         """Retrieves a part ID's BOM items
 
         Raises:
@@ -193,24 +192,23 @@ class ITApi():
             list: Part BOM items as a list of dicts
             None: Part ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if partId <= 0:
             return None
 
         query = f"bom/?part={partId}&offset=/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0:
             return None
 
         return result
 
-    @staticmethod
-    def GetManufacturerPart(id: int) -> dict | None:
+    def get_manufacturer_part(self, id: int) -> Optional[dict]:
         """Retrieves a manufacturer part from Company/Part/Manufacturer/ID
 
         Raises:
@@ -220,16 +218,16 @@ class ITApi():
             dict: ManufacturerPart as dictionary
             None: ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if id <= 0:
             return None
 
         query = f"company/part/manufacturer/{id}/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
 
         if len(result) == 0 or type(result) != type({}):
@@ -241,8 +239,7 @@ class ITApi():
 
         return result
 
-    @staticmethod
-    def GetCompany(id: int) -> dict | None:
+    def get_company(self, id: int) -> Optional[dict]:
         """Retrieves a company from Company/ID/
 
         Raises:
@@ -252,16 +249,16 @@ class ITApi():
             dict: Company as dictionary
             None: ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if id <= 0:
             return None
 
         query = f"company/{id}/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0 or type(result) != type({}):
             return None
@@ -272,8 +269,7 @@ class ITApi():
 
         return result
 
-    @staticmethod
-    def GetSupplierPart(id: int) -> dict | None:
+    def get_supplier_part(self, id: int) -> Optional[dict]:
         """Retrieves a company from Company/Part/ID/
 
         Raises:
@@ -283,16 +279,16 @@ class ITApi():
             dict: SupplierPart as dictionary
             None: ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if id <= 0:
             return None
 
         query = f"company/part/{id}/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0 or type(result) != type({}):
             return None
@@ -303,8 +299,7 @@ class ITApi():
 
         return result
 
-    @staticmethod
-    def GetSupplierPartList(partMpn: str) -> list | None:
+    def get_supplier_part_list(self, partMpn: str) -> Optional[list]:
         """Retrieves a list of all SupplierParts for a given part MPN
 
         Raises:
@@ -314,21 +309,20 @@ class ITApi():
             list: A list of SupplierParts as dicts
             None: ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         query = f"company/part/?search={partMpn}&offset=/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0 or type(result) != type([]):
             return None
 
         return result
 
-    @staticmethod
-    def GetManufacturerPartList(partId: int) -> list | None:
+    def get_manufacturer_part_list(self, partId: int) -> Optional[list]:
         """Retrieves a list of all ManufacturerParts for a given part ID
 
         Raises:
@@ -338,24 +332,23 @@ class ITApi():
             list: A list of ManufacturerParts as dicts
             None: ID is negative or query did not yield any results
         """
-        if not ITApi.IsConnected():
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected():
+            self.log.critical(f'Not connected to Inventree API!')
             raise ConnectionError("Inventree API not connected")
 
         if partId < 0:
             return None
 
         query = f"company/part/manufacturer/?part={partId}&ordering=/"
-        result = ITApi.Api.get(query)
-        ITApi.Log.debug(f'Requesting API at { query }')
+        result = self.api.get(query)
+        self.log.debug(f'Requesting API at { query }')
 
         if len(result) == 0 or type(result) != type([]):
             return None
 
         return result
 
-    @staticmethod
-    def PartExists(partIpn: str) -> bool:
+    def part_exists(self, partIpn: str) -> bool:
         """Checks if a part exists
 
         Args:
@@ -366,22 +359,20 @@ class ITApi():
         """
         partId = -1
         try:
-            partId = ITApi.GetPartId(partIpn)
+            partId = self.get_part_id(partIpn)
         except:
             partId = -1
         return partId != -1
 
-    @staticmethod
-    def IsConnected() -> bool:
+    def is_connected(self) -> bool:
         """Check if the API was connected
 
         Returns:
-            bool: True, if the Connect() function was called and succeeded. Otherwise False
+            bool: True, if the connect() function was called and succeeded. Otherwise False
         """
-        return ITApi.Connected
+        return self.connected
 
-    @staticmethod
-    def DeleteBomItem(bomItemId: int) -> bool:
+    def delete_bom_item(self, bomItemId: int) -> bool:
         """Deletes a BOM item with the given ID
 
         Args:
@@ -390,17 +381,16 @@ class ITApi():
         Returns:
             bool: True if successfull, otherwise False
         """
-        if not ITApi.IsConnected:
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected:
+            self.log.critical(f'Not connected to Inventree API!')
             return False
 
         # TODO: Guard this more
-        ITApi.Log.debug(f'Deleting BOM item at /bom/{bomItemId}/')
-        ITApi.Api.delete(f'bom/{bomItemId}/')
+        self.log.debug(f'Deleting BOM item at /bom/{bomItemId}/')
+        self.api.delete(f'bom/{bomItemId}/')
         return True
 
-    @staticmethod
-    def CreateBomItem(partIpn: str, bomItemIpn: str, quantity: int, references: list[str]) -> bool:
+    def create_bom_item(self, partIpn: str, bomItemIpn: str, quantity: int, references: list[str]) -> bool:
         """Creates a BOM item for the given part
 
         Args:
@@ -412,18 +402,18 @@ class ITApi():
         Returns:
             bool: True if the item was added. Otherwise False
         """
-        if not ITApi.IsConnected:
-            ITApi.Log.critical(f'Not connected to Inventree API!')
+        if not self.is_connected:
+            self.log.critical(f'Not connected to Inventree API!')
             return False
 
-        partId = ITApi.GetPartId(partIpn)
+        partId = self.get_part_id(partIpn)
         if partId == -1:
-            ITApi.Log.error(f'Part ID of {partIpn} could not be retrieved!')
+            self.log.error(f'Part ID of {partIpn} could not be retrieved!')
             return False
 
-        bomItemId = ITApi.GetPartId(bomItemIpn)
+        bomItemId = self.get_part_id(bomItemIpn)
         if partId == -1:
-            ITApi.Log.error(f'Part ID of {bomItemIpn} could not be retrieved!')
+            self.log.error(f'Part ID of {bomItemIpn} could not be retrieved!')
             return False
 
         partData = {
@@ -432,9 +422,9 @@ class ITApi():
             "sub_part": bomItemId,
             "reference": ", ".join(references)
         }
-        ITApi.Log.debug(f'Adding {quantity}x {bomItemIpn} to BOM of part {partIpn} ({partId})')
+        self.log.debug(f'Adding {quantity}x {bomItemIpn} to BOM of part {partIpn} ({partId})')
         try:
-            ITApi.Api.post("bom/", partData)
+            self.api.post("bom/", partData)
         except:
             return False
         return True

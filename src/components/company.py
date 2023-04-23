@@ -7,10 +7,10 @@ License identifier:
     GPL-3.0
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import NoneType
 
-from api.inventree import ITApi
+from api.inventree import InvenTreeApi
 
 @dataclass
 class Company():
@@ -76,7 +76,7 @@ class SupplierPart():
     Packaging: str = ""
     Part: int = -1
     SKU: str = ""
-    Supplier: Company = Company(None)
+    Supplier: Company = field(default_factory=lambda: Company(None))
 
     def __init__(self, data: dict | None = None):        
         """Initializes a SupplierPart object with the data obtained from Inventree API
@@ -97,7 +97,7 @@ class SupplierPart():
         self.SKU = data['SKU']
         
         # Load supplier data from Inventree
-        company = ITApi.GetCompany(data['supplier'])
+        company = InvenTreeApi.get_company(data['supplier'])
         if company is not None:
             self.Supplier = Company(company)
 
@@ -112,7 +112,7 @@ class ManufacturerPart():
     """
     ID: int = -1
     Part: int = -1
-    Manufacturer: Company = Company(None)
+    Manufacturer: Company = field(default_factory=lambda: Company(None))
     Description: str = ""
     MPN: str = ""
     Link: str = ""
@@ -134,12 +134,12 @@ class ManufacturerPart():
         self.Link = data['link']
 
         # Load manufacturer data from Inventree
-        company = ITApi.GetCompany(data['manufacturer'])
+        company = InvenTreeApi.get_company(data['manufacturer'])
         if company is not None:
             self.Manufacturer = Company(company)
 
         # Get a list of supplier parts for this manufacturer part
-        parts = ITApi.GetSupplierPartList(self.MPN)
+        parts = InvenTreeApi.get_supplier_part_list(self.MPN)
         if parts is not None:
             self.SupplierParts = []
             for part in parts:

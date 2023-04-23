@@ -7,46 +7,41 @@ License identifier:
     GPL-3.0
 """
 
-from misc.config import Config
-from misc.logger import Logger
+from dataclasses import dataclass, field
+from typing import Optional
+from misc.config import Config, Credentials
 from misc.console import Console
 from misc.commands import *
-
-from api.inventree import ITApi
+from misc.logger import Logger
+from app import App
 
 KiTreeVersion = 'v0.0-rc1'
-KiTreeAuthor = '(C) Marvin Mager - @mvnmgrx - 2022'
-
-credentials = {
-    "username": "",
-    "password": "",
-    "domain": ""
-}
+KiTreeAuthor = '(C) Marvin Mager - @mvnmgrx - 2023'
 
 if __name__ == "__main__":
     Logger.Init()
-    Config.Load()
+    app = App()
+    app.config.load()
+    app.console.print(f"KiTree CLI {KiTreeVersion} {KiTreeAuthor}")
 
-    Console.Print(f'KiTree CLI {KiTreeVersion} {KiTreeAuthor}')
-
-    ITApi.Connect(credentials)
-    Console.AddCommand("status", ShowStatus)
-    Console.AddCommand("exit", Exit)
-    Console.AddCommand("set master-part", SetMasterPart)
-    Console.AddCommand("add", AddPart)
-    Console.AddCommand("rm part", RemovePart)
-    Console.AddCommand("rm all", RemoveAllParts)
-    Console.AddCommand("list parts", ListParts)
-    Console.AddCommand("list projects", ListKnownProjects)
-    Console.AddCommand("build libs", BuildLibs)
-    Console.AddCommand("build bom", BuildBom)
-    Console.AddCommand("load", LoadProject)
-    Console.AddCommand("init", InitProject)
-    Console.AddCommand("help", GetHelp)
-    Console.AddCommand("log", ShowLog)
+    app.console.add_command("status", command_show_status)
+    app.console.add_command("exit",   command_exit)
+    app.console.add_command("load", command_load_project)
     
-    while Console.IsRunning:
-        Console.ProcessInput(Console.In())
+    # app.console.add_command("set master-part", SetMasterPart)
+    # app.console.add_command("add", AddPart)
+    # app.console.add_command("rm part", RemovePart)
+    # app.console.add_command("rm all", RemoveAllParts)
+    # app.console.add_command("list parts", ListParts)
+    # app.console.add_command("list projects", ListKnownProjects)
+    # app.console.add_command("build libs", BuildLibs)
+    # app.console.add_command("build bom", BuildBom)
+    # app.console.add_command("init", InitProject)
+    app.console.add_command("help", command_help)
+    app.console.add_command("log", command_show_log)
+    
+    while app.console.isRunning:
+        app.console.process_input(app.console.read())
 
 
 
