@@ -137,10 +137,6 @@ class BomItem():
     Overage: str = ""
     ID: int = -1
     Part: int = -1
-    PurchasePriceAvg: str = "-"
-    PurchasePriceMax = None
-    PurchasePrixeMin = None
-    PurchasePriceRange: str = "-"
     Quantity: float = 0.0
     Reference: str = ""
     SubPart: int = -1
@@ -163,14 +159,9 @@ class BomItem():
         self.Overage = data['overage']
         self.ID = data['pk']
         self.Part = data['part']
-        self.PurchasePriceAvg = data['purchase_price_avg']
-        self.PurchasePriceMax = data['purchase_price_max']
-        self.PurchasePrixeMin = data['purchase_price_min']
-        self.PurchasePriceRange = data['purchase_price_range']
         self.Quantity = data['quantity']
         self.Reference = data['reference']
         self.SubPart = data['sub_part']
-        self.PriceRange = data['price_range']
         self.Validated = data['validated']
 
 @dataclass

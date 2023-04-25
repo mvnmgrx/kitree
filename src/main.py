@@ -8,7 +8,7 @@ License identifier:
 """
 
 from app import App
-from commands.build import command_build_libs
+from commands.build import command_build_bom, command_build_libs
 from commands.exit import command_exit
 from commands.parts import command_add_part, command_list_parts, command_remove_part
 from commands.help import command_help
@@ -37,10 +37,10 @@ if __name__ == "__main__":
     app.console.add_command("rm part", command_remove_part)
     app.console.add_command("init", command_init_project)
     app.console.add_command("build libs", command_build_libs)
+    app.console.add_command("build bom", command_build_bom)
     
     # app.console.add_command("set master-part", SetMasterPart)
     # app.console.add_command("rm all", RemoveAllParts)
-    # app.console.add_command("build bom", BuildBom)
     
     while app.console.isRunning:
         app.console.process_input(app.console.read())
