@@ -212,7 +212,7 @@ def BuildLibs(args: list):
 
         # Get part's information
         part = Part(partIpn)
-        if not part.DownloadCadData():
+        if not part.download_cad_data():
             Console.Log.error(f'Part {part.IPN} failed downloading all needed CAD files! Skipping..')
             Console.Append(f'{Color.Fail}Failed downloading CAD data!')
             continue

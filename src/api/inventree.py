@@ -10,6 +10,7 @@ License identifier:
 from dataclasses import dataclass, field
 from typing import Optional
 from inventree.api import InvenTreeAPI
+from requests import HTTPError
 from components.data import Credentials
 from misc.logger import Logger
 
@@ -340,8 +341,11 @@ class InvenTreeApi():
             return None
 
         query = f"company/part/manufacturer/?part={partId}&ordering=/"
-        result = self.api.get(query)
         self.log.debug(f'Requesting API at { query }')
+        try:
+            result = self.api.get(query)
+        except HTTPError:
+            return None
 
         if len(result) == 0 or type(result) != type([]):
             return None

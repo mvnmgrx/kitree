@@ -9,6 +9,7 @@ License identifier:
 
 from dataclasses import dataclass, field
 from types import NoneType
+from typing import Optional
 
 from api.inventree import InvenTreeApi
 
@@ -35,7 +36,7 @@ class Company():
     PartsSupplied: int = 0
     PartsManufactured: int = 0
 
-    def __init__(self, data: dict | None = None):        
+    def __init__(self, data: dict | None = None):
         """Initializes a Company object with the data obtained from Inventree API
 
         Args:
@@ -43,7 +44,7 @@ class Company():
         """
         if data is None:
             return
-         
+
         self.ID = data['pk']
         self.Url = data['url']
         self.Name = data['name']
@@ -67,6 +68,8 @@ class Company():
 class SupplierPart():
     """This class represents a Company/Part of the Inventree API
     """
+    api: InvenTreeApi = None
+
     Description: str = ""
     Link: str = ""
     ManufacturerPart: int = -1
@@ -78,26 +81,27 @@ class SupplierPart():
     SKU: str = ""
     Supplier: Company = field(default_factory=lambda: Company(None))
 
-    def __init__(self, data: dict | None = None):        
+    def __init__(self, api: InvenTreeApi, data: Optional[dict] = None):
         """Initializes a SupplierPart object with the data obtained from Inventree API
 
         Args:
             data (dict): Data from Inventree API or None to create an empty object
         """
+        self.api = api
         if data is None:
             return
 
         self.Description = data['description']
-        self.Link = data['link'] 
+        self.Link = data['link']
         self.ManufacturerPart = data['manufacturer_part']
         self.Note = data['note']
         self.ID = data['pk']
         self.Packaging = data['packaging']
         self.Part = data['part']
         self.SKU = data['SKU']
-        
+
         # Load supplier data from Inventree
-        company = InvenTreeApi.get_company(data['supplier'])
+        company = self.api.get_company(data['supplier'])
         if company is not None:
             self.Supplier = Company(company)
 
@@ -110,6 +114,8 @@ class SupplierPart():
 class ManufacturerPart():
     """This class represents a Company/Part/Manufacturer of the Inventree API
     """
+    api: InvenTreeApi = None
+
     ID: int = -1
     Part: int = -1
     Manufacturer: Company = field(default_factory=lambda: Company(None))
@@ -118,12 +124,13 @@ class ManufacturerPart():
     Link: str = ""
     SupplierParts: list[SupplierPart] = None
 
-    def __init__(self, data: dict | None = None):        
+    def __init__(self, api: InvenTreeApi, data: Optional[dict] = None):
         """Initializes a ManufacturerPart object with the data obtained from Inventree API
 
         Args:
             data (dict): Data from Inventree API or None to create an empty object
         """
+        self.api = api
         if data is None:
             return
 
@@ -134,16 +141,16 @@ class ManufacturerPart():
         self.Link = data['link']
 
         # Load manufacturer data from Inventree
-        company = InvenTreeApi.get_company(data['manufacturer'])
+        company = self.api.get_company(data['manufacturer'])
         if company is not None:
             self.Manufacturer = Company(company)
 
         # Get a list of supplier parts for this manufacturer part
-        parts = InvenTreeApi.get_supplier_part_list(self.MPN)
+        parts = self.api.get_supplier_part_list(self.MPN)
         if parts is not None:
             self.SupplierParts = []
             for part in parts:
-                self.SupplierParts.append(SupplierPart(part))
+                self.SupplierParts.append(SupplierPart(self.api, part))
 
 
 

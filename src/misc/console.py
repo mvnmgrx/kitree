@@ -110,4 +110,6 @@ class Console():
             self.commands[possibleCommands[0]](self.parent_app, arguments)
         else:
             self.write('Unknown command, but those are known:')
+            self.inc()
             self.write(f'- {", ".join(possibleCommands)}')
+            self.dec()

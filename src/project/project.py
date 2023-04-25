@@ -10,7 +10,7 @@ License identifier:
 from dataclasses import dataclass, field
 from os import listdir, path
 from genericpath import isdir, isfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from api.inventree import InvenTreeApi
 from misc.logger import Logger
@@ -19,6 +19,7 @@ from project.config import ProjectConfig
 if TYPE_CHECKING:
     from app import App
 
+class DescriptiveError(Exception): pass
 class ProjectNotFoundError(Exception): pass
 class NoProjectFileError(Exception): pass
 class ProjectLoadError(Exception): pass
@@ -81,10 +82,42 @@ class Project():
         return True
         
     def save(self):
-        if not self.config.save(path.join(Project.path, '.kitree')):
+        if not self.config.save(path.join(self.path, '.kitree')):
             self.log.error(f'Could not save KiTree project at { Project.path }')
             return False
         return True
 
     def get_master_part(self) -> str:
         return self.config.data.masterPart
+    
+    def get_parts_list(self) -> List[str]:
+        return self.config.data.parts
+    
+    def add_part(self, partIpn: str):
+        if partIpn in self.config.data.parts:
+            raise DescriptiveError(f"Part '{partIpn}' already in parts list!")
+        
+        if not self.api.part_exists(partIpn):
+            self.log.warning(f'Part { partIpn } does not exist in Inventree database!')
+            raise DescriptiveError(f"Part '{partIpn}' does not exist in Inventree database!")
+
+        self.config.data.parts.append(partIpn)
+        self.log.info(f'Added part { partIpn } to project\'s part list')
+        self.save()
+
+    def remove_part(self, partIpn: str):
+        if partIpn not in self.config.data.parts:
+            raise DescriptiveError(f"Part '{partIpn}' not in parts list!")
+        
+        self.config.data.parts.remove(partIpn)
+        self.log.info(f'Removed part { partIpn } from project\'s part list')
+        self.save()
+
+    def get_server_id(self) -> str:
+        return self.config.data.inventreeServerId
+    
+    def set_server_id(self, id: str):
+        if id in self.parent_app.config.get_known_servers():
+            self.config.data.inventreeServerId = id
+        else:
+            raise DescriptiveError(f"Server '{id}' is not known. Use <server add> to add one to your configuration.")

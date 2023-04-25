@@ -140,3 +140,12 @@ class Config():
             if credential.id == id:
                 return credential
         return None
+
+    def get_known_projects(self) -> List[KnownProject]:
+        return self.data.knownProjects
+    
+    def get_known_servers(self) -> List[str]:
+        ret: List[str] = []
+        for cred in self.data.inventreeCredentials:
+            ret.append(cred.id)
+        return ret

@@ -177,6 +177,8 @@ class BomItem():
 class Part():    
     """This class represents a Part of the Inventree API
     """
+    api: InvenTreeApi = None
+
     Active: bool = False
     Assembly: bool = False
     Category: int = 0
@@ -227,11 +229,12 @@ class Part():
     SymbolPath: str = None
     """Path to the temporary symbol file downloaded by DownloadCadData()"""
 
-    def __init__(self, partIpn: str | None):
+    def __init__(self, api: InvenTreeApi, partIpn: str | None):
+        self.api = api
         if partIpn is None:
             return 
 
-        data = InvenTreeApi.GetPartDetails(partIpn)
+        data = self.api.get_part_detail(partIpn)
         if data is None:
             raise Exception(f'Part {partIpn} does not exist!')
 
@@ -271,37 +274,37 @@ class Part():
 
         # Check if the part is a variant of another part and load it
         if self.VariantOf is not NoneType and self.VariantOf is not None:
-            self.VariantPart = Part(InvenTreeApi.get_part_ipn(self.VariantOf))
+            self.VariantPart = Part(self.api, self.api.get_part_ipn(self.VariantOf))
 
         # Retrieve the part's parameter list
-        parameterList = InvenTreeApi.get_part_parameters(self.ID)
+        parameterList = self.api.get_part_parameters(self.ID)
         if parameterList is not None:
             self.Parameters = []
             for data in parameterList:
                 self.Parameters.append(PartParameter(data))
 
         # Retrieve the part's attachment list
-        attachmentList = InvenTreeApi.get_part_attachments(self.ID)
+        attachmentList = self.api.get_part_attachments(self.ID)
         if attachmentList is not None:
             self.Attachments = []
             for data in attachmentList:
                 self.Attachments.append(PartAttachment(data))
 
         # Retrieve the part's BOM items
-        bomItems = InvenTreeApi.get_part_bom_items(self.ID)
+        bomItems = self.api.get_part_bom_items(self.ID)
         if bomItems is not None:
             self.Bom = []
             for data in bomItems:
                 self.Bom.append(BomItem(data))
 
         # Get list of manufacturer parts for this Part
-        parts = InvenTreeApi.get_manufacturer_part_list(self.ID)
+        parts = self.api.get_manufacturer_part_list(self.ID)
         if parts is not None:
             self.ManufacturerParts = []
             for part in parts:
-                self.ManufacturerParts.append(ManufacturerPart(part))
+                self.ManufacturerParts.append(ManufacturerPart(self.api, part))
 
-    def DownloadCadData(self) -> bool:
+    def download_cad_data(self) -> bool:
         """Download the CAD data of the part to KiTree's temp directory
         
         Returns:
@@ -315,7 +318,7 @@ class Part():
          - self.ModelPath: Path to 3D-model file in KiTree temp folder
         """
 
-        def waterfallToComponentAttachment(component: Part, type: str) -> str:
+        def waterfall_to_component_attachment(component: Part, type: str) -> str:
             """Search for a component's attachment of given type by recursively checking its or its 
             parents (variants) attachments.
 
@@ -333,7 +336,7 @@ class Part():
                 # If the component has no attachments registered, its parent may have the 
                 # attachments assigned to. Search the parent or return None, if no parent is set.
                 if component.VariantOf is not None:
-                    return waterfallToComponentAttachment(component.VariantPart, type)
+                    return waterfall_to_component_attachment(component.VariantPart, type)
                 else:
                     self.Log.warning(f'No asset of type "{type}" for {component.IPN} found!')
                     raise Exception()
@@ -346,37 +349,37 @@ class Part():
                         return item.Attachment
                 else:
                     if component.VariantOf is not None:
-                        return waterfallToComponentAttachment(component.VariantPart, type)
+                        return waterfall_to_component_attachment(component.VariantPart, type)
                     else:
                         self.Log.warning(f'No asset of type "{type}" for {component.IPN} found!')
                         raise Exception()
 
         # Footprint and symbol have to be present at all times
         try:
-            footprintPath = waterfallToComponentAttachment(self, "Footprint")
-            symbolPath = waterfallToComponentAttachment(self, "Symbol")
+            footprintPath = waterfall_to_component_attachment(self, "Footprint")
+            symbolPath = waterfall_to_component_attachment(self, "Symbol")
         except Exception:
             self.Log.error(f'Not all attachments for part "{self.IPN}" found!')
             return False
         
         # 3D-Model may be present, but could be omited
         try:
-            modelPath = waterfallToComponentAttachment(self, "3D-Model")
+            modelPath = waterfall_to_component_attachment(self, "3D-Model")
         except Exception: 
             self.Log.warning(f'No 3D-model found for part "{self.IPN}"')
             modelPath = None
 
         # FIXME: Does this work every time KiTree is called?
-        modelFolder = path.join(getcwd(), 'temp/', 'models/')
-        fpFolder = path.join(getcwd(), 'temp/', 'footprints/')
-        symbolFolder = path.join(getcwd(), 'temp/', 'symbols/')
+        modelFolder = path.join(path.expanduser('~'), '.kitree', 'temp/', 'models/')
+        fpFolder = path.join(path.expanduser('~'), '.kitree', 'temp/', 'footprints/')
+        symbolFolder = path.join(path.expanduser('~'), '.kitree', 'temp/', 'symbols/')
 
         # Create temp paths
         makedirs(modelFolder, exist_ok=True)
         makedirs(fpFolder, exist_ok=True)
         makedirs(symbolFolder, exist_ok=True)
 
-        itUrl = InvenTreeApi.domain
+        itUrl = self.api.credentials.domain
         if itUrl[-1] == '/':
             itUrl.removesuffix('/')
 
@@ -387,9 +390,9 @@ class Part():
 
         # Download the component's files to the KiTree temp directory
         try:
-            InvenTreeApi.api.downloadFile(url=itUrl + footprintPath, destination=self.FootprintPath)
+            self.api.api.downloadFile(url=itUrl + footprintPath, destination=self.FootprintPath, overwrite=True)
             self.Log.info(f'Downloaded footprint for part "{self.IPN}" to "{self.FootprintPath}"')
-            InvenTreeApi.api.downloadFile(url=itUrl + symbolPath, destination=self.SymbolPath)
+            self.api.api.downloadFile(url=itUrl + symbolPath, destination=self.SymbolPath, overwrite=True)
             self.Log.info(f'Downloaded symbol for part "{self.IPN}" to "{self.FootprintPath}"')
         except Exception as ex:
             self.Log.error(f'Downloading attachments from Inventree API failed for part "{self.IPN}"!')
@@ -399,7 +402,7 @@ class Part():
         # Download the 3D-Model, if one was uploaded to InvenTree
         if self.ModelPath is not None:
             try:
-                InvenTreeApi.api.downloadFile(url=itUrl + modelPath, destination=self.ModelPath)
+                self.api.api.downloadFile(url=itUrl + modelPath, destination=self.ModelPath, overwrite=True)
                 self.Log.info(f'Downloaded 3D-model for part "{self.IPN}" to "{self.ModelPath}"')
             except Exception as ex:
                 self.Log.warning(f'Downloading 3D-Model from Inventree API failed for part "{self.IPN}"!')
@@ -435,7 +438,7 @@ class Part():
             return ""
         for item in self.Attachments:
             if item.Comment == 'Datasheet':
-                itUrl = InvenTreeApi.domain
+                itUrl = self.api.credentials.domain
                 if itUrl[-1] == '/':
                     itUrl.removesuffix('/')
                 return f'{itUrl}{item.Attachment}'
@@ -513,6 +516,6 @@ class Part():
             return False
 
         for item in self.Bom:
-            InvenTreeApi.delete_bom_item(item.ID)
+            self.api.delete_bom_item(item.ID)
         return True
         
