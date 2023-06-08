@@ -381,9 +381,9 @@ class Part():
 
         # Download the component's files to the KiTree temp directory
         try:
-            self.api.api.downloadFile(url=itUrl + footprintPath, destination=self.FootprintPath, overwrite=True)
+            self.api.api.api.downloadFile(url=itUrl + footprintPath, destination=self.FootprintPath, overwrite=True)
             self.Log.info(f'Downloaded footprint for part "{self.IPN}" to "{self.FootprintPath}"')
-            self.api.api.downloadFile(url=itUrl + symbolPath, destination=self.SymbolPath, overwrite=True)
+            self.api.api.api.downloadFile(url=itUrl + symbolPath, destination=self.SymbolPath, overwrite=True)
             self.Log.info(f'Downloaded symbol for part "{self.IPN}" to "{self.FootprintPath}"')
         except Exception as ex:
             self.Log.error(f'Downloading attachments from Inventree API failed for part "{self.IPN}"!')

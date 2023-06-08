@@ -15,8 +15,20 @@ from components.data import Credentials
 from misc.logger import Logger
 
 @dataclass
+class ApiProxy():
+    api: InvenTreeAPI = None
+
+    def get(self, url):
+        print(url)
+        return self.api.get(url)
+
+    def post(self, url, data):
+        print(url, data)
+        return self.api.post(url, data)
+
+@dataclass
 class InvenTreeApi():
-    api = None
+    api: ApiProxy = field(default_factory=lambda: ApiProxy())
     connected: bool = False
     credentials: Credentials = field(default_factory=lambda: Credentials())
     log = Logger.Create(__name__)
@@ -37,7 +49,7 @@ class InvenTreeApi():
         self.credentials.password = credentials.password
         try:
             self.log.debug(f'Connecting to Inventree @ {self.credentials.domain}, Username: {self.credentials.username}, PW: <redacted>')
-            self.api = InvenTreeAPI(self.credentials.domain, 
+            self.api.api = InvenTreeAPI(self.credentials.domain, 
                                     username=self.credentials.username, 
                                     password=self.credentials.password, 
                                     verbose=True)

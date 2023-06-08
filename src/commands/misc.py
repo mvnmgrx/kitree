@@ -1,6 +1,7 @@
+from typing import List
 from app import App
 
-def command_show_log(app: App, args: list):
+def command_show_log(app: App, args: List[str]):
     level = 'DEBUG' if len(args) == 0 else args[0]
     numLines = 5 if len(args) < 2 else int(args[1])
 

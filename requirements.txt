@@ -1,1 +1,2 @@
 marshmallow-dataclass
+inventree>=0.11.2

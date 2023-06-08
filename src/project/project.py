@@ -90,6 +90,10 @@ class Project():
     def get_master_part(self) -> str:
         return self.config.data.masterPart
     
+    def set_master_part(self, partIpn: str):
+        self.config.data.masterPart = partIpn
+        self.save()
+    
     def get_parts_list(self) -> List[str]:
         return self.config.data.parts
     
@@ -113,11 +117,14 @@ class Project():
         self.log.info(f'Removed part { partIpn } from project\'s part list')
         self.save()
 
+    def remove_all_parts(self):
+        self.config.data.parts.clear()
+        self.log.info(f'Removed all parts from project\'s part list')
+        self.save()
+
     def get_server_id(self) -> str:
         return self.config.data.inventreeServerId
     
     def set_server_id(self, id: str):
-        if id in self.parent_app.config.get_known_servers():
-            self.config.data.inventreeServerId = id
-        else:
-            raise DescriptiveError(f"Server '{id}' is not known. Use <server add> to add one to your configuration.")
+        self.config.data.inventreeServerId = id
+        self.save()

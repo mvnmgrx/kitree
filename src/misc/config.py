@@ -30,6 +30,7 @@ class ConfigData():
     knownProjects: List[KnownProject] = field(default_factory=list)
     """Projects known to kitree"""
 
+@dataclass
 class Config():
     """Static class managing and representing the config file"""
 

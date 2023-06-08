@@ -86,30 +86,18 @@ class Console():
         self.log.debug(f'Added "{ command }" to command list')
 
     def process_input(self, input: str):
-        possibleCommands = []
-        # Get all possible commands for the user's input
-        for command in self.commands:
-            if command.find(input) != -1:
-                possibleCommands.append(command)
+        # Split input into its parts
+        arguments = input.split(' ')
+        arguments = [i.strip() for i in arguments]
 
-        if len(possibleCommands) == 0:
-            # Check if the command is already found in the user's input
-            for command in self.commands:
-                if input.find(command) == 0:
-                    possibleCommands.append(command)
-
-        if len(possibleCommands) == 0:
-            return self.write(f'{Color.Fail}Unknown command!')
-
-        elif len(possibleCommands) == 1:
-            # TODO: Remove this hack to get the arguments as list
-            arguments = input.removeprefix(possibleCommands[0]).split(' ')[1:]
-            arguments = [i.strip() for i in arguments]
-            self.log.debug(f'Executing command "{ possibleCommands[0] }" at { str(self.commands[possibleCommands[0]]) }')
-            self.log.debug(f'Using arguments: { str(arguments) }')
-            self.commands[possibleCommands[0]](self.parent_app, arguments)
+        for command in self.commands.keys():
+            if command == arguments[0]:        
+                self.log.debug(f"Executing command '{command}' at {str(self.commands[command])}")
+                self.log.debug(f"Using arguments: {str(arguments)}")    
+                self.commands[command](self.parent_app, arguments[1:])
+                break
         else:
-            self.write('Unknown command, but those are known:')
+            self.write("Unknown command, but those are known:")
             self.inc()
-            self.write(f'- {", ".join(possibleCommands)}')
+            self.write(f"{', '.join(self.commands.keys())}")
             self.dec()

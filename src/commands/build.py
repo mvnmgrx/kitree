@@ -3,6 +3,7 @@ from genericpath import isfile
 import time
 from os import listdir, makedirs, path, rmdir, unlink
 from shutil import copy
+from typing import List
 
 from kiutils.items.common import Position, Property, Coordinate
 from kiutils.footprint import Footprint, Model
@@ -14,8 +15,23 @@ from app import App
 from components.part import Part
 from misc.colors import Color
 
+def command_build(app: App, args: List[str]):
+    if len(args) < 1:
+        app.console.write("")
+        app.console.write("build: Generate output with kitree")
+        app.console.write("")
+        app.console.write("Usage:")
+        app.console.write("  build libs               Build the KiCad libraries for the active project")
+        app.console.write("  build bom                Build the InvenTree BOM of the active project")
+        app.console.write("")
+        return
+        
+    if args[0] == "libs": command_build_libs(app, args)
+    elif args[0] == "bom": command_build_bom(app, args)
+    else: app.console.write(f"{Color.Fail}Unknown option!{Color.End}")
 
-def command_build_libs(app: App, args: list):
+
+def command_build_libs(app: App, args: List[str]):
     if not app.project.isLoaded:
         return app.console.write('No project loaded!')
 
@@ -119,13 +135,13 @@ def command_build_libs(app: App, args: list):
         # and extract the KiCad properties found at the end of the properties list (keywords,
         # description and filters)
         # FIXME: Filters is not always present in each symbol!
-        if len(partSymbol.properties) < 7:
-            app.console.log.error(f'Part {part.IPN}\'s symbol\'s properties are corrupted! Expecting at least the 7 standard properties. Skipping..')
-            app.console.append(f'{Color.Fail}Symbol properties corrupted!')
-            continue
+        # if len(partSymbol.properties) < 7:
+        #     app.console.log.error(f'Part {part.IPN}\'s symbol\'s properties are corrupted! Expecting at least the 7 standard properties. Skipping..')
+        #     app.console.append(f'{Color.Fail}Symbol properties corrupted!')
+        #     continue
 
         basicProperties = partSymbol.properties[0:4]
-        kicadProperties = partSymbol.properties[-3:]
+        # kicadProperties = partSymbol.properties[-3:]
         basicEffects = basicProperties[2].effects
         basicEffects.hide = True
         
@@ -170,14 +186,14 @@ def command_build_libs(app: App, args: list):
                 break
         
         # Adjust IDs of KiCad parameters accordingly and set symbol keywords as well as description
-        kicadProperties[0].id = 11
-        kicadProperties[0].value = part.Keywords
-        kicadProperties[1].id = 12
-        kicadProperties[1].value = part.FullName
-        kicadProperties[2].id = 13
+        # kicadProperties[0].id = 11
+        # kicadProperties[0].value = part.Keywords
+        # kicadProperties[1].id = 12
+        # kicadProperties[1].value = part.FullName
+        # kicadProperties[2].id = 13
 
         # Build properties of final symbol and append it to the project's symbol library
-        partSymbol.properties = basicProperties + additionalProperties + kicadProperties
+        partSymbol.properties = basicProperties + additionalProperties # + kicadProperties
         projectSymbolLib.symbols.append(partSymbol)
 
         #    _____                 ___          __           _      __ 
@@ -297,7 +313,7 @@ def command_build_libs(app: App, args: list):
     endTime = time.time()
     app.console.write(f'{Color.OkGreen}Done! {Color.End}Took {Color.Bold}{endTime-startTime:.2f}s')
 
-def command_build_bom(app: App, args: list):
+def command_build_bom(app: App, args: List[str]):
     startTime = time.time()
     if not app.project.isLoaded:
         return app.console.write('No project loaded!')
