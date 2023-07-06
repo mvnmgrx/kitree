@@ -23,21 +23,21 @@ class ApiProxy():
         st = time.time()
         ret = self.api.get(url)
         et = time.time()
-        print(f"{et-st:.2}s | {url}")
+        #print(f"{et-st:.2}s | {url}")
         return ret
 
     def post(self, url, data):
         st = time.time()
         ret = self.api.post(url, data)
         et = time.time()
-        print(f"{et-st:.2}s | {url}")
+        #print(f"{et-st:.2}s | {url}")
         return ret
     
     def delete(self, url):
         st = time.time()
         ret = self.api.delete(url)
         et = time.time()
-        print(f"{et-st:.2}s | {url}")
+        #print(f"{et-st:.2}s | {url}")
         return ret
 
 @dataclass

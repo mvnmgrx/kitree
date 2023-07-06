@@ -1,6 +1,4 @@
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
 
 from misc.config import Config
 from misc.console import Console
