@@ -24,41 +24,42 @@ from misc.colors import Color
 from misc.console import Console
 from misc.config import Config
 from project.project import Project
-from api.inventree import ITApi
+from api.inventree import InvenTreeApi
 
+from main import App
 
-def ShowStatus(args: list):
-    if not Project.Loaded:
-        return Console.Out('No project loaded!')
+def command_show_status(app: App, args: list):
+    if not app.project.isLoaded:
+        return app.console.write('No project loaded!')
 
-    Console.Out(f'Project "{ Project.Name }" loaded')
-    Console.Out(f'  🌐 Path: {Color.OkBlue}{ Project.Path }')
-    if Project.MasterPart is None:
-        Console.Out(f'  ⭐ Master IPN: undefined')
+    app.console.write(f'Project "{ Project.name }" loaded')
+    app.console.write(f'  🌐 Path: {Color.OkBlue}{ Project.path }')
+    if app.project.MasterPart is None:
+        app.console.write(f'  ⭐ Master IPN: undefined')
     else:
-        Console.Out(f'  ⭐ Master IPN: {Color.Bold}{ Project.MasterPart }')
+        app.console.write(f'  ⭐ Master IPN: {Color.Bold}{app.project.masterPart}')
 
-def Exit(args: list):
-    Console.Out('Goodbye!')
+def command_exit(app: App, args: list):
+    app.console.write('Goodbye!')
     exit()
 
 def SetMasterPart(args: list):
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
     if len(args) == 0:
         return Console.Out('Usage: set master-part [ IPN ]')
 
-    if not ITApi.PartExists(args[0]):
+    if not InvenTreeApi.part_exists(args[0]):
         return Console.Out(f'Part { args[0] } does not exist in Inventree!')
 
     Project.MasterPart = args[0]
     Project.Save()
-    Console.Log.info(f'Changed master-part of { Project.Name } to { Project.MasterPart }')
-    Console.Out(f'Master-part of "{ Project.Name }" set to { Project.MasterPart }')
+    Console.Log.info(f'Changed master-part of { Project.name } to { Project.MasterPart }')
+    Console.Out(f'Master-part of "{ Project.name }" set to { Project.MasterPart }')
 
 def RemovePart(args: list):
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
     if len(args) == 0:
@@ -73,7 +74,7 @@ def RemovePart(args: list):
         Console.Out(f'Part { args[0] } not found in project part list!')
 
 def RemoveAllParts(args: list):
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
     partCount = len(Project.Parts)
@@ -82,7 +83,7 @@ def RemoveAllParts(args: list):
     if choice.find('y') != -1:
         Project.Parts.clear()
         if Project.Save():
-            Console.Out(f'Cleared parts list of project { Project.Name }, removed { partCount } items')
+            Console.Out(f'Cleared parts list of project { Project.name }, removed { partCount } items')
         else:
             Console.Out(f'{Color.Fail}Could not save project\'s .kitree file!')
 
@@ -90,7 +91,7 @@ def RemoveAllParts(args: list):
         Console.Out('Aborted..')
 
 def AddPart(args: list):
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
     if len(args) == 0:
@@ -108,7 +109,7 @@ def AddPart(args: list):
         Console.Out(f'{Color.Fail}Invalid IPN or part is not available in Inventree')
 
 def ListParts(args: list):
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
     if len(Project.Parts) == 0:
@@ -131,19 +132,19 @@ def ListKnownProjects(args: list):
             Console.Out(f' - {project}')
 
 def BuildLibs(args: list):
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
-    libname = f'{Project.Name}-librarys'
-    libpath = path.join(Project.Path, libname)
-    symbolpath = path.join(libpath, f"{Project.Name}-symbols.kicad_sym")
+    libname = f'{Project.name}-librarys'
+    libpath = path.join(Project.path, libname)
+    symbolpath = path.join(libpath, f"{Project.name}-symbols.kicad_sym")
     projectSymbolLib = SymbolLib(
         filePath  = symbolpath, 
         generator = 'kitree_build_libs', 
         version   = '20211014'
     )
 
-    Console.Out(f'Building project {Project.Name} ..')
+    Console.Out(f'Building project {Project.name} ..')
     startTime = time.time()
 
     # Remove the old library folder, if it exists
@@ -186,7 +187,7 @@ def BuildLibs(args: list):
             Console.Out(f'Could not remove files! Check log for more information ..', Color.Fail)
 
     # Recreate library folder in KiCad project folder
-    makedirs(path.join(libpath, f"{Project.Name}-footprints.pretty"), exist_ok=True)
+    makedirs(path.join(libpath, f"{Project.name}-footprints.pretty"), exist_ok=True)
     makedirs(path.join(libpath, "3dmodels"), exist_ok=True)
 
     Console.Out('Downloading parts..')
@@ -204,14 +205,14 @@ def BuildLibs(args: list):
         # FIXME: What to do when more than one of the same IPN is present on the Inventree server
         #        This is unexpected behavior but might happen accidentally. Saying "not found" on 
         #        the CLI is therefore missleading.
-        if not ITApi.PartExists(partIpn):
+        if not InvenTreeApi.part_exists(partIpn):
             Console.Log.error(f'Part {partIpn} not found on Inventree server ..')
             Console.Append(f'{Color.Fail}Not available in Inventree!')
             continue
 
         # Get part's information
         part = Part(partIpn)
-        if not part.DownloadCadData():
+        if not part.download_cad_data():
             Console.Log.error(f'Part {part.IPN} failed downloading all needed CAD files! Skipping..')
             Console.Append(f'{Color.Fail}Failed downloading CAD data!')
             continue
@@ -262,7 +263,7 @@ def BuildLibs(args: list):
             basicProperties[1].value = schematicId.replace('/', '_') # Replace / with _ as KiCad dont likes this as name
             renameSymbol(partSymbol, schematicId)
         
-        basicProperties[2].value = f'{Project.Name}-footprints:{part.GetFootprintName()}'
+        basicProperties[2].value = f'{Project.name}-footprints:{part.GetFootprintName()}'
         basicProperties[2].position = Position(X=0.0, Y=200.0, angle=0.0)
         basicProperties[3].value = part.GetDatasheetUrl()
         basicProperties[3].position = Position(X=0.0, Y=198.08, angle=0.0)
@@ -303,7 +304,7 @@ def BuildLibs(args: list):
 
         # Open and read footprint file in library
         partFootprint = Footprint().from_file(part.FootprintPath)
-        footprintPathInProject = path.join(libpath, f"{Project.Name}-footprints.pretty", part.GetFootprintName()+'.kicad_mod')
+        footprintPathInProject = path.join(libpath, f"{Project.name}-footprints.pretty", part.GetFootprintName()+'.kicad_mod')
 
         # Set correct 3d-model path in footprint, if one was downloaded from InvenTree
         partFootprint.models.clear()
@@ -356,55 +357,55 @@ def BuildLibs(args: list):
         projectSymbolLib.to_file()
         Console.Append(f'{Color.OkGreen}Done!')
     except Exception as ex:
-        Console.Log.error(f'Could not write symbol library of project "{Project.Name}" to {projectSymbolLib.filePath}!')
+        Console.Log.error(f'Could not write symbol library of project "{Project.name}" to {projectSymbolLib.filePath}!')
         Console.Log.debug(f'Exception: {str(ex)}')
         return Console.Append(f'{Color.Fail}Failed!')
 
     # Add symbol library to KiCad sym-lib-table, if not done before
     Console.Out('Adding symbol library table entry .. ', newline=False)
-    libtablePath = path.join(Project.Path, 'sym-lib-table')
+    libtablePath = path.join(Project.path, 'sym-lib-table')
     if isfile(libtablePath):
         symbolLibTable = LibTable().from_file(libtablePath)
     else:
         symbolLibTable = LibTable(type='sym_lib_table', filePath=libtablePath)
 
     for lib in symbolLibTable.libs:
-        if lib.name == f'{Project.Name}-symbols':
+        if lib.name == f'{Project.name}-symbols':
             Console.Append(f'{Color.OkBlue}Skipped..')
             break
     else:
         symbolLibTable.libs.append(Library(
-            name=f'{Project.Name}-symbols', 
-            uri=f'${{KIPRJMOD}}/{libname}/{Project.Name}-symbols.kicad_sym'))
+            name=f'{Project.name}-symbols', 
+            uri=f'${{KIPRJMOD}}/{libname}/{Project.name}-symbols.kicad_sym'))
         try:
             symbolLibTable.to_file()
             Console.Append(f'{Color.OkGreen}Done!')
         except Exception as ex:
-            Console.Log.error(f'Could not write symbol library table of project "{Project.Name}" to {symbolLibTable.filePath}!')
+            Console.Log.error(f'Could not write symbol library table of project "{Project.name}" to {symbolLibTable.filePath}!')
             Console.Log.debug(f'Exception: {str(ex)}')
             Console.Append(f'{Color.Fail}Failed!')
         
     # Add footprint library to KiCad fp-lib-table, if not done before
     Console.Out('Adding footprint library table entry .. ', newline=False)
-    fptablePath = path.join(Project.Path, 'fp-lib-table')
+    fptablePath = path.join(Project.path, 'fp-lib-table')
     if isfile(fptablePath):
         fpLibTable = LibTable().from_file(fptablePath)
     else:
         fpLibTable = LibTable(type='fp_lib_table', filePath=fptablePath)
 
     for lib in fpLibTable.libs:
-        if lib.name == f'{Project.Name}-footprints':
+        if lib.name == f'{Project.name}-footprints':
             Console.Append(f'{Color.OkBlue}Skipped..')
             break
     else:
         fpLibTable.libs.append(Library(
-            name=f'{Project.Name}-footprints', 
-            uri=f'${{KIPRJMOD}}/{libname}/{Project.Name}-footprints.pretty'))
+            name=f'{Project.name}-footprints', 
+            uri=f'${{KIPRJMOD}}/{libname}/{Project.name}-footprints.pretty'))
         try:
             fpLibTable.to_file()
             Console.Append(f'{Color.OkGreen}Done!')
         except Exception as ex:
-            Console.Log.error(f'Could not write footprint library table of project "{Project.Name}" to {fpLibTable.filePath}!')
+            Console.Log.error(f'Could not write footprint library table of project "{Project.name}" to {fpLibTable.filePath}!')
             Console.Log.debug(f'Exception: {str(ex)}')
             Console.Append(f'{Color.Fail}Failed!')
 
@@ -414,13 +415,13 @@ def BuildLibs(args: list):
 
 def BuildBom(args: list):
     startTime = time.time()
-    if not Project.Loaded:
+    if not Project.isLoaded:
         return Console.Out('No project loaded!')
 
     if Project.MasterPart is None:
         return Console.Out('No master IPN set. Use "set master-part"')
 
-    if not ITApi.PartExists(Project.MasterPart):
+    if not InvenTreeApi.part_exists(Project.MasterPart):
         return Console.Out('Master part does not exist in Inventree!')
 
     masterPart = Part(Project.MasterPart)
@@ -440,12 +441,12 @@ def BuildBom(args: list):
 
     # Open KiCad project schematic
     Console.Out('Parsing KiCad schematic .. ', newline=False)
-    schematicPath = path.join(Project.Path, f'{Project.Name}.kicad_sch')
+    schematicPath = path.join(Project.path, f'{Project.name}.kicad_sch')
     try:
         schematic = Schematic().from_file(schematicPath)
         Console.Append(f'{Color.OkGreen}Done!')
     except Exception as ex:
-        Console.Log.error(f'Could not parse schematic of project "{Project.Name}" at {schematicPath}!')
+        Console.Log.error(f'Could not parse schematic of project "{Project.name}" at {schematicPath}!')
         Console.Log.debug(f'Exception: {str(ex)}')
         return Console.Append(f'{Color.Fail}Failed!')
 
@@ -549,7 +550,7 @@ def BuildBom(args: list):
     Console.Inc()
     for part in parts.keys():
         Console.Out(f'Processing {part} .. ', newline=False)
-        if ITApi.CreateBomItem(Project.MasterPart, part, len(parts[part]), parts[part]):
+        if InvenTreeApi.create_bom_item(Project.MasterPart, part, len(parts[part]), parts[part]):
             Console.Append(f'{Color.OkGreen}Done!')
         else:
             Console.Append(f'{Color.Fail}Failed!')
@@ -558,8 +559,8 @@ def BuildBom(args: list):
     endTime = time.time()
     Console.Out(f'{Color.OkGreen}Done! {Color.End}Took {Color.Bold}{endTime-startTime:.2f}s')
     
-def LoadProject(args: list):
-    if Project.Loaded:
+def command_load_project(args: list):
+    if Project.isLoaded:
         return Console.Out("A project is already loaded!")
 
     if len(args) == 0:
@@ -589,13 +590,13 @@ def LoadProject(args: list):
             Console.Log.info(f'Using "{ path }" as path for known project { args[0] }')
 
     if Project.Load(path):
-        Console.Out(f'Successfully loaded project \'{Project.Name}\'')
-        Config.SetLastProject(Project.Name)
+        Console.Out(f'Successfully loaded project \'{Project.name}\'')
+        Config.SetLastProject(Project.name)
     else:
         Console.Out(f'Could not load project! Check log files for more information..')
 
 def InitProject(args: list):
-    if Project.Loaded:
+    if Project.isLoaded:
         return Console.Out("A project is already loaded!")
 
     if len(args) == 0:
@@ -619,7 +620,7 @@ def InitProject(args: list):
     # Initialize KiTree project
     Config.SetLastProject(projectName)
     Config.AddKnownProject(projectName, suppliedPath)
-    Project.Path = suppliedPath
+    Project.path = suppliedPath
     Project.Save()
     Console.Out(f'Project "{projectName}" successfully initialized! Use "load last" to load it')
 
