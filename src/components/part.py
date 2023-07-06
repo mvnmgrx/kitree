@@ -446,7 +446,7 @@ class Part():
             return "n/a"
         if len(self.ManufacturerParts) == 0:
             return "n/a"
-        return self.ManufacturerParts[0].Manufacturer.Description
+        return self.ManufacturerParts[0].Manufacturer.Name
 
     def GetMPN(self) -> str:
         """Retrieve the MPN of the first manufacturer part
