@@ -20,15 +20,18 @@ It is designed with the following workflow in mind:
 
 - [x] Basic usage 
 - [ ] Part creation from KiCad to InvenTree
-- [ ] Export JLCPCB assembly BOMs
+- [x] Export JLCPCB assembly BOMs
 - [ ] Use vendor APIs to create parts from templates in InvenTree
 - [ ] ??? - Make suggestions for other features by opening an issue
 
 # Requirements
 
 - Python 3.10 or higher
-- [KiUtils](https://github.com/mvnmgrx/kiutils) - `$ pip install kiutils`
-- [InvenTree Python](https://github.com/inventree/inventree-python) - `$ pip install inventree`
+
+Install other requirements using:
+```
+$ pip install -r requirements.txt
+```
 
 # Documentation
 
@@ -36,6 +39,4 @@ To be defined at first release. Bookmark the project to stay updated.
 
 # Development
 
-0. Install the required packages
-1. Rename `kitree-cfg.example.json` to `kitree-cfg.json`
-2. Fill in the credentials to your InvenTree server
+To be defined ..
