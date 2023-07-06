@@ -170,12 +170,12 @@ def command_build_libs(app: App, args: List[str]):
 
         # Add additional properties to the symbol that are retrieved from the Inventree part
         additionalProperties = [
-            Property(key="Internal Nr.", value=part.IPN, id=4, effects=basicEffects, position=Position(0.0, 196.14, 0.0)),
-            Property(key="Manufacturer", value=part.GetManufacturerName(), id=5, effects=basicEffects, position=Position(0.0, 194.21, 0.0)),
-            Property(key="Part Nr.", value=part.GetMPN(), id=6, effects=basicEffects, position=Position(0.0, 192.28, 0.0)),
-            Property(key="Supplier", value=part.GetSupplierName(), id=7, effects=basicEffects, position=Position(0.0, 190.35, 0.0)),
-            Property(key="Order Nr.", value=part.GetSKU(), id=8, effects=basicEffects, position=Position(0.0, 188.42, 0.0)),
-            Property(key="Link", value=part.GetSupplierLink(), id=9, effects=basicEffects, position=Position(0.0, 186.49, 0.0))
+            Property(key=app.config.get_ipn_field_name(), value=part.IPN, id=4, effects=basicEffects, position=Position(0.0, 196.14, 0.0)),
+            Property(key=app.config.get_manufacturer_field_name(), value=part.GetManufacturerName(), id=5, effects=basicEffects, position=Position(0.0, 194.21, 0.0)),
+            Property(key=app.config.get_mpn_field_name(), value=part.GetMPN(), id=6, effects=basicEffects, position=Position(0.0, 192.28, 0.0)),
+            Property(key=app.config.get_supplier_field_name(), value=part.GetSupplierName(), id=7, effects=basicEffects, position=Position(0.0, 190.35, 0.0)),
+            Property(key=app.config.get_sku_field_name(), value=part.GetSKU(), id=8, effects=basicEffects, position=Position(0.0, 188.42, 0.0)),
+            Property(key=app.config.get_url_field_name(), value=part.GetSupplierLink(), id=9, effects=basicEffects, position=Position(0.0, 186.49, 0.0))
         ]
         
         # Search for the Package field that should be kept if its given

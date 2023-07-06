@@ -18,6 +18,15 @@ from components.data import Credentials, KnownProject
 from misc.logger import Logger
 
 @dataclass
+class PropertyFields():
+    ipnFieldName: str = "Internal Nr."
+    manufacturerFieldName: str = "Manufacturer"
+    mpnFieldName: str = "Part Nr."
+    supplierFieldName: str = "Supplier"
+    skuFieldName: str = "Order Nr."
+    urlFieldName: str = "Link"
+
+@dataclass
 class ConfigData():
     """Class containing all configuration data that shall be exists in the config file"""
 
@@ -29,6 +38,8 @@ class ConfigData():
 
     knownProjects: List[KnownProject] = field(default_factory=list)
     """Projects known to kitree"""
+
+    propertyFields: PropertyFields = field(default_factory=lambda: PropertyFields())
 
 @dataclass
 class Config():
@@ -150,3 +161,21 @@ class Config():
         for cred in self.data.inventreeCredentials:
             ret.append(cred.id)
         return ret
+
+    def get_ipn_field_name(self) -> str:
+        return self.data.propertyFields.ipnFieldName
+    
+    def get_manufacturer_field_name(self) -> str:
+        return self.data.propertyFields.manufacturerFieldName
+    
+    def get_mpn_field_name(self) -> str:
+        return self.data.propertyFields.mpnFieldName
+    
+    def get_supplier_field_name(self) -> str:
+        return self.data.propertyFields.supplierFieldName
+    
+    def get_sku_field_name(self) -> str:
+        return self.data.propertyFields.skuFieldName
+    
+    def get_url_field_name(self) -> str:
+        return self.data.propertyFields.urlFieldName
