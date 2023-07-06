@@ -8,6 +8,7 @@ License identifier:
 """
 
 from dataclasses import dataclass, field
+import time
 from typing import Optional
 from inventree.api import InvenTreeAPI
 from requests import HTTPError
@@ -19,12 +20,25 @@ class ApiProxy():
     api: InvenTreeAPI = None
 
     def get(self, url):
-        print(url)
-        return self.api.get(url)
+        st = time.time()
+        ret = self.api.get(url)
+        et = time.time()
+        print(f"{et-st:.2}s | {url}")
+        return ret
 
     def post(self, url, data):
-        print(url, data)
-        return self.api.post(url, data)
+        st = time.time()
+        ret = self.api.post(url, data)
+        et = time.time()
+        print(f"{et-st:.2}s | {url}")
+        return ret
+    
+    def delete(self, url):
+        st = time.time()
+        ret = self.api.delete(url)
+        et = time.time()
+        print(f"{et-st:.2}s | {url}")
+        return ret
 
 @dataclass
 class InvenTreeApi():

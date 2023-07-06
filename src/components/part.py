@@ -229,7 +229,7 @@ class Part():
         if data is None:
             raise Exception(f'Part {partIpn} does not exist!')
 
-        self.CategoryDetail = PartCategory(data['category_detail'])
+        #self.CategoryDetail = PartCategory(data['category_detail'])
 
         self.Active = data['active']
         self.Assembly = data['assembly']
