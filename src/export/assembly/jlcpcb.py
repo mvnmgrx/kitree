@@ -158,6 +158,11 @@ class JlcAssemblyXY(GenericExporter):
                     app.console.append(f'{C.Fail}Failed!')
                     return False
 
+                if board.setup.auxAxisOrigin is None:
+                    self.log.error("Aux axis origin is not set!")
+                    app.console.append(f"{C.Fail}No aux axis origin defined!{C.End}")
+                    return False
+                
                 for footprint in board.footprints:
                     reference = footprint.graphicItems[0].text
                     app.console.write(f'Processing {reference} ..', newline=False)
@@ -195,7 +200,14 @@ class JlcAssemblyXY(GenericExporter):
 
                     layer = 'Top' if footprint.layer == 'F.Cu' else 'Bottom'
                     rotation = footprint.position.angle if footprint.position.angle is not None else 0
-                    csv_writer.writerow([reference, footprint.position.X, footprint.position.Y, layer, rotation])
+                    csv_writer.writerow([
+                            reference, 
+                            footprint.position.X - board.setup.auxAxisOrigin.X, 
+                            -(footprint.position.Y - board.setup.auxAxisOrigin.Y), 
+                            layer, 
+                            rotation
+                        ]
+                    )
 
                     app.console.write(f'{C.OkGreen}OK')
 
