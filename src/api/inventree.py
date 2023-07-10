@@ -12,6 +12,7 @@ import time
 from typing import Optional
 from inventree.api import InvenTreeAPI
 from requests import HTTPError
+import requests
 from components.data import Credentials
 from misc.logger import Logger
 
@@ -21,6 +22,7 @@ class ApiProxy():
 
     def get(self, url):
         st = time.time()
+        print('.', end='', flush=True)
         ret = self.api.get(url)
         et = time.time()
         #print(f"{et-st:.2}s | {url}")
@@ -28,6 +30,7 @@ class ApiProxy():
 
     def post(self, url, data):
         st = time.time()
+        print('.', end='', flush=True)
         ret = self.api.post(url, data)
         et = time.time()
         #print(f"{et-st:.2}s | {url}")
@@ -35,7 +38,16 @@ class ApiProxy():
     
     def delete(self, url):
         st = time.time()
+        print('.', end='', flush=True)
         ret = self.api.delete(url)
+        et = time.time()
+        #print(f"{et-st:.2}s | {url}")
+        return ret
+    
+    def downloadFile(self, url, destination, **kwargs):
+        st = time.time()
+        print('.', end='', flush=True)
+        ret = self.api.downloadFile(url, destination, **kwargs)
         et = time.time()
         #print(f"{et-st:.2}s | {url}")
         return ret
