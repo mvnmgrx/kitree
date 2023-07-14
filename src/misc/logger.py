@@ -12,6 +12,10 @@ License identifier:
 
 import logging
 from logging.handlers import RotatingFileHandler
+from os import listdir, path
+import os
+
+from misc.constants import KITREE_CONFIG_DIR
 
 class Logger():
     """Wrapper around Pythons's `logging` module used to initialize and generate loggers.
@@ -35,7 +39,11 @@ class Logger():
         # stream_handler.setFormatter(format)
         # logger.addHandler(stream_handler)
 
-        file_handler = RotatingFileHandler("kitree.log", maxBytes = 10e6, backupCount = 1)
+        for file in listdir(KITREE_CONFIG_DIR):
+            if "kitree.log" in file:
+                os.remove(path.join(KITREE_CONFIG_DIR, file))
+
+        file_handler = RotatingFileHandler(path.join(KITREE_CONFIG_DIR, "kitree.log"), maxBytes = 10e6, backupCount = 1)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(format)
         logger.addHandler(file_handler)
