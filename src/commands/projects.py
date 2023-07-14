@@ -1,6 +1,8 @@
 from genericpath import isfile
 from os import listdir, path
 from typing import List
+
+from prettytable import PrettyTable
 from app import App
 from misc.colors import Color
 from project.project import ApiConnectionError, DescriptiveError, InvalidServerIdError, NoProjectFileError, \
@@ -77,11 +79,20 @@ def command_list_known_projects(app: App, args: List[str]):
     if len(projects) == 0:
         return app.console.write("No projects known!")
 
+    t = PrettyTable()
+    t.field_names = ["Name", "Path", "Status"]
+    t.align = "l"
     for project in projects:
+        row = [ f"{Color.Bold}{project.name}{Color.End}", project.path ]
         if project.name == app.config.get_last_known_project_name():
-            app.console.write(f' - {project.name} at {project.path} {Color.OkBlue}<last>')
+            row.append(f"{Color.OkBlue}<last>{Color.End}")
         else:
-            app.console.write(f' - {project.name} at {project.path}')
+            row.append("")
+        t.add_row(row)
+
+    app.console.print("\n")
+    for row in t.get_string().split("\n"):
+        app.console.write(row)
 
 def command_init_project(app: App, args: List[str]):
     if app.project.isLoaded:
@@ -114,7 +125,7 @@ def command_init_project(app: App, args: List[str]):
         app.config.add_known_project(projectName, suppliedPath)
         app.project.path = suppliedPath
         app.project.save()
-        app.console.write(f'Project "{projectName}" successfully initialized! Use "load last" to load it')
+        app.console.write(f'Project "{projectName}" successfully initialized! Use "project load last" to load it')
     except DescriptiveError as ex:
         app.console.write(f'{Color.Fail}{ex}{Color.End}')
 
