@@ -11,45 +11,46 @@ from dataclasses import dataclass, field
 import time
 from typing import Optional
 from inventree.api import InvenTreeAPI
+from inventree.part import Part as InventreePart
 from requests import HTTPError
-import requests
 from components.data import Credentials
 from misc.logger import Logger
 
 @dataclass
 class ApiProxy():
     api: InvenTreeAPI = None
+    log: Logger = field(default_factory=lambda: Logger.Create("API-Proxy"))
 
     def get(self, url):
         st = time.time()
-        print('.', end='', flush=True)
+        # print('.', end='', flush=True)
         ret = self.api.get(url)
         et = time.time()
-        #print(f"{et-st:.2}s | {url}")
+        self.log.debug(f"{et-st:.2}s | {url}")
         return ret
 
     def post(self, url, data):
         st = time.time()
-        print('.', end='', flush=True)
+        # print('.', end='', flush=True)
         ret = self.api.post(url, data)
         et = time.time()
-        #print(f"{et-st:.2}s | {url}")
+        self.log.debug(f"{et-st:.2}s | {url}")
         return ret
     
     def delete(self, url):
         st = time.time()
-        print('.', end='', flush=True)
+        # print('.', end='', flush=True)
         ret = self.api.delete(url)
         et = time.time()
-        #print(f"{et-st:.2}s | {url}")
+        self.log.debug(f"{et-st:.2}s | {url}")
         return ret
     
     def downloadFile(self, url, destination, **kwargs):
         st = time.time()
-        print('.', end='', flush=True)
+        # print('.', end='', flush=True)
         ret = self.api.downloadFile(url, destination, **kwargs)
         et = time.time()
-        #print(f"{et-st:.2}s | {url}")
+        self.log.debug(f"{et-st:.2}s | {url}")
         return ret
 
 @dataclass
@@ -77,8 +78,7 @@ class InvenTreeApi():
             self.log.debug(f'Connecting to Inventree @ {self.credentials.domain}, Username: {self.credentials.username}, PW: <redacted>')
             self.api.api = InvenTreeAPI(self.credentials.domain, 
                                     username=self.credentials.username, 
-                                    password=self.credentials.password, 
-                                    verbose=True)
+                                    password=self.credentials.password)
             self.connected = True
         except Exception as ex:
             self.connected = False
@@ -469,4 +469,60 @@ class InvenTreeApi():
             self.api.post("bom/", partData)
         except:
             return False
+        return True
+    
+    def delete_attachment(self, attachmentId: int) -> bool:
+        """Deletes an attachment of a part
+
+        Args:
+            attachmentId (int): ID of the attachment
+
+        Returns:
+            bool: True if successfull, otherwise False
+        """
+        if not self.is_connected:
+            self.log.critical(f'Not connected to Inventree API!')
+            return False
+
+        # TODO: Guard this more
+        self.log.debug(f'Deleting attachment at part/attachment/{attachmentId}/')
+        self.api.delete(f'part/attachment/{attachmentId}/')
+        return True
+    
+    def upload_attachment(self, partIpn: str, attachmentPath: str, comment: str) -> bool:
+        if not self.is_connected:
+            self.log.critical(f'Not connected to Inventree API!')
+            return False
+        
+        partId = self.get_part_id(partIpn)
+        if partId == -1:
+            self.log.error(f'Invalid part ID!')
+            return False
+        
+        self.log.debug(f'Uploading attachment from {attachmentPath} to part/{partId}/ (comment: {comment})')
+        InventreePart(api=self.api.api, pk=partId).uploadAttachment(attachmentPath, comment=comment)
+        return True
+    
+    def update_attachment_comment(self, attachmentId: int, newComment: str) -> bool:        
+        if not self.is_connected:
+            self.log.critical(f'Not connected to Inventree API!')
+            return False
+        
+        self.log.debug(f'Changing attachment comment of {attachmentId} to {newComment}')
+        data = {
+            'comment': newComment
+        }
+        self.api.api.patch(f'part/attachment/{attachmentId}/', data)
+        return True
+    
+    def update_attachment_filename(self, attachmentId: int, newName: str) -> bool:        
+        if not self.is_connected:
+            self.log.critical(f'Not connected to Inventree API!')
+            return False
+        
+        self.log.debug(f'Changing attachment name of {attachmentId} to {newName}')
+        data = {
+            'filename': newName
+        }
+        self.api.api.patch(f'part/attachment/{attachmentId}/', data)
         return True
