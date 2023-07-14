@@ -52,7 +52,7 @@ class JlcAssemblyBom(GenericExporter):
                 # Enumerate parts in schematic
                 app.console.write('Enumerating KiCad board .. ', newline=False)
                 enumerated_parts = {}
-                enumerated_parts = enumerate_board(app, board, use_tht=False)
+                enumerated_parts = enumerate_board(app, board) #, use_tht=False
                 app.console.append(f'{C.OkGreen}Done!')
                 app.console.write('Found the following parts:')
                 app.console.inc()
@@ -193,10 +193,10 @@ class JlcAssemblyXY(GenericExporter):
                         self.log.info(f'Skipping {reference} as it was excluded from POS files!')
                         continue
 
-                    if footprint.attributes.type != 'smd':
-                        app.console.write(f'{C.Warning}No SMD part! Skipping ..')
-                        self.log.info(f'Skipping {reference} as only SMD components shall be used!')
-                        continue
+                    # if footprint.attributes.type != 'smd':
+                    #     app.console.write(f'{C.Warning}No SMD part! Skipping ..')
+                    #     self.log.info(f'Skipping {reference} as only SMD components shall be used!')
+                    #     continue
 
                     layer = 'Top' if footprint.layer == 'F.Cu' else 'Bottom'
                     rotation = footprint.position.angle if footprint.position.angle is not None else 0
