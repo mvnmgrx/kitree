@@ -202,8 +202,8 @@ class JlcAssemblyXY(GenericExporter):
                     rotation = footprint.position.angle if footprint.position.angle is not None else 0
                     csv_writer.writerow([
                             reference, 
-                            footprint.position.X - board.setup.auxAxisOrigin.X, 
-                            -(footprint.position.Y - board.setup.auxAxisOrigin.Y), 
+                            f"{footprint.position.X - board.setup.auxAxisOrigin.X:.5f}", 
+                            f"{-(footprint.position.Y - board.setup.auxAxisOrigin.Y):.5f}", 
                             layer, 
                             rotation
                         ]
