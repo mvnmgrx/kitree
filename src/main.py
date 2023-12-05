@@ -8,6 +8,7 @@ License identifier:
 """
 
 from app import App
+from commands.board import command_board
 from commands.build import command_build
 from commands.exit import command_exit
 from commands.export import command_export
@@ -27,13 +28,11 @@ if __name__ == "__main__":
     app.console.add_command("project", command_project)
     app.console.add_command("part", command_parts)
     app.console.add_command("build", command_build)
-    app.console.add_command("exit",   command_exit)
+    app.console.add_command("exit", command_exit)
     app.console.add_command("help", command_help)
     app.console.add_command("log", command_show_log)
     app.console.add_command("export", command_export)
+    app.console.add_command("board", command_board)
 
     while app.console.isRunning:
         app.console.process_input(app.console.read())
-
-
-
