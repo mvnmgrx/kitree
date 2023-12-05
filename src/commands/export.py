@@ -23,4 +23,5 @@ def command_export(app: App, args: List[str]):
 
     if args[0] in get_exporters().keys():
         get_exporters()[args[0]].export(app, args[1:])
-    else: app.console.write(f"{C.Fail}Unknown option!{C.End}")
+    else: 
+        app.console.write(f"{C.Fail}Unknown option!{C.End}")
